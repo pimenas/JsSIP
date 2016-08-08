@@ -18143,6 +18143,7 @@ Subscriber.prototype.subscribe = function(uri, options) {
         stalled: false,
         receiveResponse: function(response) {
             debug('receiveResponse()', response);
+            rtcSession.status = RTCSession.C.STATUS_CONFIRMED;
         },
         onRequestTimeout: function() {
             debug('onRequestTimeout()');
