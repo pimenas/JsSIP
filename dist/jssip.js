@@ -18111,7 +18111,7 @@ Subscriber.prototype.subscribe = function(uri, options) {
     }
 
     if (!!options && !!options.eventHandlers && !!options.eventHandlers.notify) {
-        options.eventHandlers.notify(conferenceInfoXml);
+        options.eventHandlers.notify({ conferenceInfoXml: conferenceInfoXml });
     }
 };
 
