@@ -18113,6 +18113,17 @@ Subscriber.prototype.subscribe = function(uri, options) {
 
     var requestParams = {from_tag: Utils.newTag()};
     var extraHeaders = !!options && !!options.extraHeaders ? options.extraHeaders : [];
+
+    // Set anonymous property
+    this.anonymous = options.anonymous || false;
+
+    this.contact = this.ua.contact.toString({
+        anonymous: this.anonymous,
+        outbound: true
+    });
+
+    extraHeaders.push('Contact: ' + this.contact);
+
     var request = new SIPMessage.OutgoingRequest(JsSIP_C.SUBSCRIBE, uri, this.ua, requestParams, extraHeaders);
 
     var applicant = {
