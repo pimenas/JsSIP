@@ -18102,7 +18102,7 @@ var JsSIP_C = require('./Constants');
 var RequestSender = require('./RequestSender');
 var SIPMessage = require('./SIPMessage');
 var Utils = require('./Utils');
-//var RTCSession = require('./RTCSession.js');
+var RTCSession = require('./RTCSession.js');
 
 function Subscriber(ua) {
     debug('new()');
@@ -18112,6 +18112,7 @@ function Subscriber(ua) {
 Subscriber.prototype.subscribe = function(uri, options) {
     debug('subscribing to ' + uri + ' with options: ', options);
 
+    var rtcSession = new RTCSession(this.ua);
     var requestParams = {from_tag: Utils.newTag()};
     var extraHeaders = !!options && !!options.extraHeaders ? options.extraHeaders : [];
 
@@ -18125,9 +18126,14 @@ Subscriber.prototype.subscribe = function(uri, options) {
 
     extraHeaders.push('Contact: ' + this.contact);
 
-    //var rtcSession = new RTCSession(this.ua);
-
     var request = new SIPMessage.OutgoingRequest(JsSIP_C.SUBSCRIBE, uri, this.ua, requestParams, extraHeaders);
+    
+    rtcSession.request = request;
+    rtcSession.from_tag = requestParams.from_tag;
+    rtcSession.id = rtcSession.request.call_id + rtcSession.from_tag;
+
+    // Save the session into the ua sessions collection.
+    this.ua.sessions[rtcSession.id] = rtcSession;
 
     var applicant = {
         method: 'SUBSCRIBE',
@@ -18559,7 +18565,7 @@ Subscriber.test = { };
 //   }
 // };
 
-},{"./Constants":1,"./RequestSender":17,"./SIPMessage":18,"./Utils":26,"debug":34}],21:[function(require,module,exports){
+},{"./Constants":1,"./RTCSession.js":11,"./RequestSender":17,"./SIPMessage":18,"./Utils":26,"debug":34}],21:[function(require,module,exports){
 var T1 = 500,
   T2 = 4000,
   T4 = 5000;
