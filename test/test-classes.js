@@ -160,6 +160,7 @@ module.exports = {
 
   'new Subscriber': function(test) {
     var subscriber = new JsSIP.Subscriber();
+    test.ok(subscriber !== null, 'subscriber should not be null');
     test.done();
   }
 

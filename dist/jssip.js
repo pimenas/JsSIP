@@ -162,7 +162,7 @@ var C = {
 
 module.exports = C;
 
-},{"../package.json":47}],2:[function(require,module,exports){
+},{"../package.json":48}],2:[function(require,module,exports){
 module.exports = Dialog;
 
 
@@ -380,7 +380,7 @@ Dialog.prototype = {
   }
 };
 
-},{"./Constants":1,"./Dialog/RequestSender":3,"./SIPMessage":18,"./Transactions":21,"debug":33}],3:[function(require,module,exports){
+},{"./Constants":1,"./Dialog/RequestSender":3,"./SIPMessage":18,"./Transactions":22,"debug":34}],3:[function(require,module,exports){
 module.exports = DialogRequestSender;
 
 /**
@@ -460,7 +460,7 @@ DialogRequestSender.prototype = {
   }
 };
 
-},{"../Constants":1,"../RTCSession":11,"../RequestSender":17,"../Transactions":21}],4:[function(require,module,exports){
+},{"../Constants":1,"../RTCSession":11,"../RequestSender":17,"../Transactions":22}],4:[function(require,module,exports){
 module.exports = DigestAuthentication;
 
 
@@ -649,7 +649,7 @@ DigestAuthentication.prototype.toString = function() {
   return 'Digest ' + auth_params.join(', ');
 };
 
-},{"./Utils":25,"debug":33}],5:[function(require,module,exports){
+},{"./Utils":26,"debug":34}],5:[function(require,module,exports){
 /**
  * @namespace Exceptions
  * @memberOf JsSIP
@@ -12941,7 +12941,7 @@ module.exports = (function(){
   result.SyntaxError.prototype = Error.prototype;
   return result;
 })();
-},{"./NameAddrHeader":9,"./URI":24}],7:[function(require,module,exports){
+},{"./NameAddrHeader":9,"./URI":25}],7:[function(require,module,exports){
 /**
  * Dependencies.
  */
@@ -12959,6 +12959,7 @@ var URI = require('./URI');
 var NameAddrHeader = require('./NameAddrHeader');
 var Grammar = require('./Grammar');
 var WebSocketInterface = require('./WebSocketInterface');
+var Subscriber = require('./Subscriber');
 
 
 /**
@@ -12976,7 +12977,8 @@ var JsSIP = module.exports = {
   // Expose the debug module.
   debug: require('debug'),
   // Expose the rtcninja module.
-  rtcninja: rtcninja
+  rtcninja: rtcninja,
+  Subscriber: Subscriber
 };
 
 
@@ -12990,7 +12992,7 @@ Object.defineProperties(JsSIP, {
   }
 });
 
-},{"../package.json":47,"./Constants":1,"./Exceptions":5,"./Grammar":6,"./NameAddrHeader":9,"./UA":23,"./URI":24,"./Utils":25,"./WebSocketInterface":26,"debug":33,"rtcninja":38}],8:[function(require,module,exports){
+},{"../package.json":48,"./Constants":1,"./Exceptions":5,"./Grammar":6,"./NameAddrHeader":9,"./Subscriber":20,"./UA":24,"./URI":25,"./Utils":26,"./WebSocketInterface":27,"debug":34,"rtcninja":39}],8:[function(require,module,exports){
 module.exports = Message;
 
 
@@ -13209,7 +13211,7 @@ Message.prototype.newMessage = function(originator, request) {
   });
 };
 
-},{"./Constants":1,"./Exceptions":5,"./RequestSender":17,"./SIPMessage":18,"./Transactions":21,"./Utils":25,"events":28,"util":32}],9:[function(require,module,exports){
+},{"./Constants":1,"./Exceptions":5,"./RequestSender":17,"./SIPMessage":18,"./Transactions":22,"./Utils":26,"events":29,"util":33}],9:[function(require,module,exports){
 module.exports = NameAddrHeader;
 
 
@@ -13319,7 +13321,7 @@ NameAddrHeader.parse = function(name_addr_header) {
   }
 };
 
-},{"./Grammar":6,"./URI":24}],10:[function(require,module,exports){
+},{"./Grammar":6,"./URI":25}],10:[function(require,module,exports){
 var Parser = {};
 
 module.exports = Parser;
@@ -13601,7 +13603,7 @@ Parser.parseMessage = function(data, ua) {
   return message;
 };
 
-},{"./Grammar":6,"./SIPMessage":18,"debug":33}],11:[function(require,module,exports){
+},{"./Grammar":6,"./SIPMessage":18,"debug":34}],11:[function(require,module,exports){
 module.exports = RTCSession;
 
 
@@ -16459,7 +16461,7 @@ function onunmute(options) {
   });
 }
 
-},{"./Constants":1,"./Dialog":2,"./Exceptions":5,"./RTCSession/DTMF":12,"./RTCSession/ReferNotifier":13,"./RTCSession/ReferSubscriber":14,"./RTCSession/Request":15,"./RequestSender":17,"./SIPMessage":18,"./Timers":20,"./Transactions":21,"./Utils":25,"debug":33,"events":28,"rtcninja":38,"sdp-transform":44,"util":32}],12:[function(require,module,exports){
+},{"./Constants":1,"./Dialog":2,"./Exceptions":5,"./RTCSession/DTMF":12,"./RTCSession/ReferNotifier":13,"./RTCSession/ReferSubscriber":14,"./RTCSession/Request":15,"./RequestSender":17,"./SIPMessage":18,"./Timers":21,"./Transactions":22,"./Utils":26,"debug":34,"events":29,"rtcninja":39,"sdp-transform":45,"util":33}],12:[function(require,module,exports){
 module.exports = DTMF;
 
 
@@ -16623,7 +16625,7 @@ DTMF.prototype.init_incoming = function(request) {
   }
 };
 
-},{"../Constants":1,"../Exceptions":5,"../RTCSession":11,"debug":33}],13:[function(require,module,exports){
+},{"../Constants":1,"../Exceptions":5,"../RTCSession":11,"debug":34}],13:[function(require,module,exports){
 module.exports = ReferNotifier;
 
 
@@ -16685,7 +16687,7 @@ ReferNotifier.prototype.notify = function(code, reason) {
   });
 };
 
-},{"../Constants":1,"./Request":15,"debug":33}],14:[function(require,module,exports){
+},{"../Constants":1,"./Request":15,"debug":34}],14:[function(require,module,exports){
 module.exports = ReferSubscriber;
 
 
@@ -16849,7 +16851,7 @@ function removeSubscriber() {
   this.session.referSubscriber = null;
 }
 
-},{"../Constants":1,"../Grammar":6,"./Request":15,"debug":33,"events":28,"util":32}],15:[function(require,module,exports){
+},{"../Constants":1,"../Grammar":6,"./Request":15,"debug":34,"events":29,"util":33}],15:[function(require,module,exports){
 module.exports = Request;
 
 /**
@@ -16939,7 +16941,7 @@ Request.prototype.onDialogError = function() {
   if (this.eventHandlers.onDialogError) { this.eventHandlers.onDialogError(); }
 };
 
-},{"../Constants":1,"../Exceptions":5,"../RTCSession":11,"debug":33}],16:[function(require,module,exports){
+},{"../Constants":1,"../Exceptions":5,"../RTCSession":11,"debug":34}],16:[function(require,module,exports){
 module.exports = Registrator;
 
 
@@ -17247,7 +17249,7 @@ Registrator.prototype = {
 };
 
 
-},{"./Constants":1,"./RequestSender":17,"./SIPMessage":18,"./Utils":25,"debug":33}],17:[function(require,module,exports){
+},{"./Constants":1,"./RequestSender":17,"./SIPMessage":18,"./Utils":26,"debug":34}],17:[function(require,module,exports){
 module.exports = RequestSender;
 
 
@@ -17393,7 +17395,7 @@ RequestSender.prototype = {
   }
 };
 
-},{"./Constants":1,"./DigestAuthentication":4,"./Transactions":21,"./UA":23,"debug":33}],18:[function(require,module,exports){
+},{"./Constants":1,"./DigestAuthentication":4,"./Transactions":22,"./UA":24,"debug":34}],18:[function(require,module,exports){
 module.exports = {
   OutgoingRequest: OutgoingRequest,
   IncomingRequest: IncomingRequest,
@@ -18019,7 +18021,7 @@ function IncomingResponse() {
 
 IncomingResponse.prototype = new IncomingMessage();
 
-},{"./Constants":1,"./Grammar":6,"./NameAddrHeader":9,"./Utils":25,"debug":33,"sdp-transform":44}],19:[function(require,module,exports){
+},{"./Constants":1,"./Grammar":6,"./NameAddrHeader":9,"./Utils":26,"debug":34,"sdp-transform":45}],19:[function(require,module,exports){
 module.exports = Socket;
 
 /**
@@ -18092,7 +18094,422 @@ Socket.isSocket = function(socket) {
   return true;
 };
 
-},{"./Grammar":6,"./Utils":25,"debug":33}],20:[function(require,module,exports){
+},{"./Grammar":6,"./Utils":26,"debug":34}],20:[function(require,module,exports){
+module.exports = Subscriber;
+
+function Subscriber() { }
+
+Subscriber.prototype = { };
+
+Subscriber.test = { };
+// JsSIP.Subscriber = function(ua) {
+//   this.logger = ua.getLogger('jssip.subscriber')
+// };
+
+// JsSIP.Subscriber.prototype = {
+//   initSubscriber: function(){
+//     this.N = null;
+//     this.subscriptions = {};
+//   },
+
+//   timer_N: function(){
+//     this.close();
+//   },
+
+//   close: function() {
+//     var subscription;
+
+//     if (this.state !== 'terminated') {
+//       this.logger.log('terminating Subscriber');
+
+//       this.state = 'terminated';
+//       window.clearTimeout(this.N);
+
+//       for (subscription in this.subscriptions) {
+//         this.subscriptions[subscription].unsubscribe();
+//       }
+
+//       //Delete subscriber from ua.sessions
+//       delete this.ua.sessions[this.id];
+
+//       this.onTerminate();
+//     }
+//   },
+
+//   onSubscriptionTerminate: function(subscription) {
+
+//     delete this.subscriptions[subscription.id];
+
+//     if (Object.keys(this.subscriptions).length === 0) {
+//       this.close();
+//     }
+//   },
+
+//   subscribe: function() {
+//     var subscriber, from_tag, expires;
+
+//     if (['notify_wait', 'pending', 'active', 'terminated'].indexOf(this.state) !== -1) {
+//       this.logger.error('subscription is already on');
+//       return;
+//     }
+
+//     subscriber = this;
+//     from_tag = JsSIP.Utils.newTag();
+
+//     new function() {
+//       this.request = subscriber.createSubscribeRequest(null,{from_tag:from_tag});
+//       var request_sender = new JsSIP.RequestSender(this, subscriber.ua);
+
+//       this.receiveResponse = function(response) {
+//         switch(true) {
+//           case /^1[0-9]{2}$/.test(response.status_code): // Ignore provisional responses.
+//             break;
+//           case /^2[0-9]{2}$/.test(response.status_code):
+//             expires = response.s('Expires');
+
+//             if (expires && expires <= subscriber.expires) {
+//               window.clearTimeout(subscriber.N);
+//               subscriber.N = window.setTimeout(
+//                 function() {subscriber.timer_N();},
+//                 (expires * 1000)
+//               );
+//               // Save route set and to tag for backwards compatibility (3265)
+//               subscriber.route_set_2xx =  response.getHeaderAll('record-route').reverse();
+//               subscriber.to_tag_2xx = response.s('to').tag;
+//               subscriber.initial_local_seqnum = parseInt(response.s('cseq').value,10);
+//             }
+//             else {
+//               subscriber.close();
+
+//               if (!expires) {
+//                 this.logger.warn('Expires header missing in a 200-class response to SUBSCRIBE');
+//                 subscriber.onFailure(null, JsSIP.C.EXPIRES_HEADER_MISSING);
+//               } else {
+//                 this.logger.warn('Expires header in a 200-class response to SUBSCRIBE with a higher value than the indicated in the request');
+//                 subscriber.onFailure(null, JsSIP.C.INVALID_EXPIRES_HEADER);
+//               }
+//             }
+//             break;
+//           default:
+//             subscriber.close();
+//             subscriber.onFailure(response,null);
+//             break;
+//         }
+//       };
+
+//       this.onRequestTimeout = function() {
+//         subscriber.onFailure(null, JsSIP.C.causes.REQUEST_TIMEOUT);
+//       };
+
+//       this.onTransportError = function() {
+//         subscriber.onFailure(null, JsSIP.C.causes.CONNECTION_ERROR);
+//       };
+
+//       this.send = function() {
+//         subscriber.id = this.request.headers['Call-ID'] + from_tag;
+//         subscriber.ua.sessions[subscriber.id] = subscriber;
+//         subscriber.state = 'notify_wait';
+//         subscriber.N = window.setTimeout(
+//           function() {subscriber.timer_N();},
+//           (JsSIP.Timers.T1 * 64)
+//         );
+//         request_sender.send();
+//       };
+//       this.send();
+//     };
+
+//   },
+
+//   unsubscribe: function() {
+//     this.close();
+//   },
+
+//   /**
+//   * Every Session needs a 'terminate' method in order to be called by JsSIP.UA
+//   * when user fires JsSIP.UA.close()
+//   */
+//   terminate: function() {
+//     this.unsubscribe();
+//   },
+
+//   refresh: function() {
+//     var subscription;
+
+//     for (subscription in this.subscriptions) {
+//       this.subscriptions[subscription].subscribe();
+//     }
+//   },
+
+//   receiveRequest: function(request) {
+//     var subscription_state, expires;
+
+//     if (!this.matchEvent(request)) {
+//       return;
+//     }
+
+//     subscription_state = request.s('Subscription-State');
+//     expires = subscription_state.expires || this.expires;
+
+//     switch (subscription_state.state) {
+//       case 'pending':
+//       case 'active':
+//         //create the subscription.
+//         window.clearTimeout(this.N);
+//         new JsSIP.Subscription(this, request, subscription_state.state, expires);
+//         break;
+//       case 'terminated':
+//         if (subscription_state.reason) {
+//           this.logger.log('terminating subscription with reason '+ subscription_state.reason);
+//         }
+//         window.clearTimeout(this.N);
+//         this.close();
+//         break;
+//     }
+//   },
+
+//   matchEvent: function(request) {
+//     var event;
+
+//     // Check mandatory header Event
+//     if (!request.hasHeader('Event')) {
+//       this.logger.warn('missing Event header');
+//       return false;
+//     }
+//     // Check mandatory header Subscription-State
+//     if (!request.hasHeader('Subscription-State')) {
+//       this.logger.warn('missing Subscription-State header');
+//       return false;
+//     }
+
+//     // Check whether the event in NOTIFY matches the event in SUBSCRIBE
+//     event = request.s('event').event;
+
+//     if (this.event !== event) {
+//       this.logger.warn('event match failed');
+//       request.reply(481, 'Event Match Failed');
+//       return false;
+//     } else {
+//       return true;
+//     }
+//   }
+// };
+
+// JsSIP.Subscription = function (subscriber, request, state, expires) {
+
+//     this.id = null;
+//     this.subscriber = subscriber;
+//     this.ua = subscriber.ua;
+//     this.state = state;
+//     this.expires = expires;
+//     this.dialog = null;
+//     this.N = null;
+//     this.error_codes  = [404,405,410,416,480,481,482,483,484,485,489,501,604];
+
+//     //Create dialog and pass the request to receiveRequest method.
+//     if (this.createConfirmedDialog(request,'UAS')) {
+//       this.id = this.dialog.id.toString();
+//       this.subscriber.subscriptions[this.id] = this;
+
+//       /* Update the route_set
+//       * If the endpoint responded with a 2XX to the initial subscribe
+//       */
+//       if (request.from_tag === this.subscriber.to_tag_2xx) {
+//         this.dialog.route_set = this.subscriber.route_set_2xx;
+//       }
+
+//       this.dialog.local_seqnum = this.subscriber.initial_local_seqnum;
+
+//       this.receiveRequest(request, true);
+//     }
+// };
+
+// JsSIP.Subscription.prototype = {
+//   timer_N: function(){
+//     if (this.state === 'terminated') {
+//       this.close();
+//     } else if (this.state === 'pending') {
+//       this.state = 'terminated';
+//       this.close();
+//     } else {
+//       this.subscribe();
+//     }
+//   },
+
+//   close: function() {
+//     this.state = 'terminated';
+//     this.terminateDialog();
+//     window.clearTimeout(this.N);
+//     this.subscriber.onSubscriptionTerminate(this);
+//   },
+
+//   createConfirmedDialog: function(message, type) {
+//     var local_tag, remote_tag, id, dialog;
+
+//     // Create a confirmed dialog given a message and type ('UAC' or 'UAS')
+//     local_tag = (type === 'UAS') ? message.to_tag : message.from_tag;
+//     remote_tag = (type === 'UAS') ? message.from_tag : message.to_tag;
+//     id = message.call_id + local_tag + remote_tag;
+
+//     dialog = new JsSIP.Dialog(this, message, type);
+
+//     if(dialog) {
+//       this.dialog = dialog;
+//       return true;
+//     }
+//     // Dialog not created due to an error
+//     else {
+//       return false;
+//     }
+//   },
+
+//   terminateDialog: function() {
+//     if(this.dialog) {
+//       this.dialog.terminate();
+//       delete this.dialog;
+//     }
+//   },
+
+//   receiveRequest: function(request, initial) {
+//     var subscription_state,
+//       subscription = this;
+
+//     if (!initial && !this.subscriber.matchEvent(request)) {
+//       this.logger.warn('NOTIFY request does not match event');
+//       return;
+//     }
+
+//     request.reply(200, JsSIP.C.REASON_200, [
+//       'Contact: <'+ this.subscriber.contact +'>'
+//     ]);
+
+//     subscription_state = request.s('Subscription-State');
+
+//     switch (subscription_state.state) {
+//       case 'active':
+//         this.state = 'active';
+//         this.subscriber.receiveInfo(request);
+//         /* falls through */
+//       case 'pending':
+//         this.expires = subscription_state.expires || this.expires;
+//         window.clearTimeout(subscription.N);
+//         subscription.N = window.setTimeout(
+//           function() {subscription.timer_N();},
+//           (this.expires * 1000)
+//         );
+//         break;
+//       case 'terminated':
+//         if (subscription_state.reason) {
+//           this.logger.log('terminating subscription with reason '+ subscription_state.reason);
+//         }
+//         this.close();
+//         this.subscriber.receiveInfo(request);
+//         break;
+//     }
+//   },
+
+//   subscribe: function() {
+//     var expires,
+//       subscription = this;
+
+//     new function() {
+//       this.request = subscription.subscriber.createSubscribeRequest(subscription.dialog);
+
+//       var request_sender = new JsSIP.RequestSender(this, subscription.subscriber.ua);
+
+//       this.receiveResponse = function(response) {
+//         if (subscription.error_codes.indexOf(response.status_code) !== -1) {
+//           subscription.close();
+//           subscription.subscriber.onFailure(response, null);
+//         } else {
+//           switch(true) {
+//             case /^1[0-9]{2}$/.test(response.status_code): // Ignore provisional responses.
+//               break;
+//             case /^2[0-9]{2}$/.test(response.status_code):
+//               expires = response.s('Expires');
+
+//               if (expires && expires <= subscription.expires) {
+//                 window.clearTimeout(subscription.N);
+//                 subscription.N = window.setTimeout(
+//                   function() {subscription.timer_N();},
+//                   (expires * 1000)
+//                 );
+//               }else {
+//                 subscription.close();
+
+//                 if (!expires) {
+//                   this.logger.warn('Expires header missing in a 200-class response to SUBSCRIBE');
+//                   subscription.subscriber.onFailure(null, JsSIP.C.EXPIRES_HEADER_MISSING);
+//                 } else {
+//                   this.logger.warn('Expires header in a 200-class response to SUBSCRIBE with a higher value than the indicated in the request');
+//                   subscription.subscriber.onFailure(null, JsSIP.C.INVALID_EXPIRES_HEADER);
+//                 }
+//               }
+//               break;
+//             default:
+//               subscription.close();
+//               subscription.subscriber.onFailure(response,null);
+//               break;
+//           }
+//         }
+//       };
+
+//       this.send = function() {
+//         window.clearTimeout(subscription.N);
+//         subscription.N = window.setTimeout(
+//           function() {subscription.timer_N();},
+//           (JsSIP.Timers.T1 * 64)
+//         );
+//         request_sender.send();
+//       };
+
+//       this.onRequestTimeout = function() {
+//         subscription.subscriber.onFailure(null, JsSIP.C.causes.REQUEST_TIMEOUT);
+//       };
+
+//       this.onTransportError = function() {
+//         subscription.subscriber.onFailure(null, JsSIP.C.causes.CONNECTION_ERROR);
+//       };
+
+//       this.send();
+//     };
+//   },
+
+//   unsubscribe: function() {
+//     var subscription = this;
+
+//     this.state = 'terminated';
+
+//     new function() {
+//       this.request = subscription.subscriber.createSubscribeRequest(subscription.dialog);
+//       this.request.setHeader('Expires', 0);
+
+//       var request_sender = new JsSIP.RequestSender(this, subscription.subscriber.ua);
+
+//       //Don't care about response.
+//       this.receiveResponse = function(){};
+
+//       this.send = function() {
+//         window.clearTimeout(subscription.N);
+//         subscription.N = window.setTimeout(
+//           function() {subscription.timer_N();},
+//           (JsSIP.Timers.T1 * 64)
+//         );
+//         request_sender.send();
+//       };
+
+//       this.onRequestTimeout = function() {
+//         subscription.subscriber.onFailure(null, JsSIP.C.causes.REQUEST_TIMEOUT);
+//       };
+//       this.onTransportError = function() {
+//         subscription.subscriber.onFailure(null, JsSIP.C.causes.CONNECTION_ERROR);
+//       };
+
+//       this.send();
+//     };
+//   }
+// };
+
+},{}],21:[function(require,module,exports){
 var T1 = 500,
   T2 = 4000,
   T4 = 5000;
@@ -18117,7 +18534,7 @@ var Timers = {
 
 module.exports = Timers;
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 module.exports = {
   C: null,
   NonInviteClientTransaction: NonInviteClientTransaction,
@@ -18807,7 +19224,7 @@ function checkTransaction(ua, request) {
   }
 }
 
-},{"./Constants":1,"./Timers":20,"debug":33,"events":28,"util":32}],22:[function(require,module,exports){
+},{"./Constants":1,"./Timers":21,"debug":34,"events":29,"util":33}],23:[function(require,module,exports){
 module.exports = Transport;
 
 /**
@@ -19099,7 +19516,7 @@ function getSocket() {
   this.socket = candidates[idx].socket;
 }
 
-},{"./Socket":19,"debug":33}],23:[function(require,module,exports){
+},{"./Socket":19,"debug":34}],24:[function(require,module,exports){
 module.exports = UA;
 
 
@@ -20373,7 +20790,7 @@ function onTransportData(data) {
  }
 }
 
-},{"./Constants":1,"./Exceptions":5,"./Grammar":6,"./Message":8,"./Parser":10,"./RTCSession":11,"./Registrator":16,"./SIPMessage":18,"./Socket":19,"./Transactions":21,"./Transport":22,"./URI":24,"./Utils":25,"./WebSocketInterface":26,"./sanityCheck":27,"debug":33,"events":28,"rtcninja":38,"util":32}],24:[function(require,module,exports){
+},{"./Constants":1,"./Exceptions":5,"./Grammar":6,"./Message":8,"./Parser":10,"./RTCSession":11,"./Registrator":16,"./SIPMessage":18,"./Socket":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./WebSocketInterface":27,"./sanityCheck":28,"debug":34,"events":29,"rtcninja":39,"util":33}],25:[function(require,module,exports){
 module.exports = URI;
 
 
@@ -20585,7 +21002,7 @@ URI.parse = function(uri) {
   }
 };
 
-},{"./Constants":1,"./Grammar":6,"./Utils":25}],25:[function(require,module,exports){
+},{"./Constants":1,"./Grammar":6,"./Utils":26}],26:[function(require,module,exports){
 var Utils = {};
 
 module.exports = Utils;
@@ -21000,7 +21417,7 @@ Utils.calculateMD5 = function(string) {
   return temp.toLowerCase();
 };
 
-},{"./Constants":1,"./Grammar":6,"./URI":24}],26:[function(require,module,exports){
+},{"./Constants":1,"./Grammar":6,"./URI":25}],27:[function(require,module,exports){
 module.exports = WebSocketInterface;
 
 /**
@@ -21136,7 +21553,7 @@ function onError(e) {
   debugerror('WebSocket ' + this.url + ' error: '+ e);
 }
 
-},{"./Grammar":6,"debug":33}],27:[function(require,module,exports){
+},{"./Grammar":6,"debug":34}],28:[function(require,module,exports){
 module.exports = sanityCheck;
 
 
@@ -21363,7 +21780,7 @@ function reply(status_code) {
   transport.send(response);
 }
 
-},{"./Constants":1,"./SIPMessage":18,"./Utils":25,"debug":33}],28:[function(require,module,exports){
+},{"./Constants":1,"./SIPMessage":18,"./Utils":26,"debug":34}],29:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -21423,8 +21840,12 @@ EventEmitter.prototype.emit = function(type) {
       er = arguments[1];
       if (er instanceof Error) {
         throw er; // Unhandled 'error' event
+      } else {
+        // At least give some kind of context to the user
+        var err = new Error('Uncaught, unspecified "error" event. (' + er + ')');
+        err.context = er;
+        throw err;
       }
-      throw TypeError('Uncaught, unspecified "error" event.');
     }
   }
 
@@ -21663,7 +22084,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -21688,9 +22109,8 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 // shim for using process in browser
-
 var process = module.exports = {};
 
 // cached from whatever global is present so that test runners that stub it
@@ -21702,21 +22122,35 @@ var cachedSetTimeout;
 var cachedClearTimeout;
 
 (function () {
-  try {
-    cachedSetTimeout = setTimeout;
-  } catch (e) {
-    cachedSetTimeout = function () {
-      throw new Error('setTimeout is not defined');
+    try {
+        cachedSetTimeout = setTimeout;
+    } catch (e) {
+        cachedSetTimeout = function () {
+            throw new Error('setTimeout is not defined');
+        }
     }
-  }
-  try {
-    cachedClearTimeout = clearTimeout;
-  } catch (e) {
-    cachedClearTimeout = function () {
-      throw new Error('clearTimeout is not defined');
+    try {
+        cachedClearTimeout = clearTimeout;
+    } catch (e) {
+        cachedClearTimeout = function () {
+            throw new Error('clearTimeout is not defined');
+        }
     }
-  }
 } ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        return setTimeout(fun, 0);
+    } else {
+        return cachedSetTimeout.call(null, fun, 0);
+    }
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        clearTimeout(marker);
+    } else {
+        cachedClearTimeout.call(null, marker);
+    }
+}
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -21741,7 +22175,7 @@ function drainQueue() {
     if (draining) {
         return;
     }
-    var timeout = cachedSetTimeout(cleanUpNextTick);
+    var timeout = runTimeout(cleanUpNextTick);
     draining = true;
 
     var len = queue.length;
@@ -21758,7 +22192,7 @@ function drainQueue() {
     }
     currentQueue = null;
     draining = false;
-    cachedClearTimeout(timeout);
+    runClearTimeout(timeout);
 }
 
 process.nextTick = function (fun) {
@@ -21770,7 +22204,7 @@ process.nextTick = function (fun) {
     }
     queue.push(new Item(fun, args));
     if (queue.length === 1 && !draining) {
-        cachedSetTimeout(drainQueue, 0);
+        runTimeout(drainQueue);
     }
 };
 
@@ -21809,14 +22243,14 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -22406,7 +22840,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":31,"_process":30,"inherits":29}],33:[function(require,module,exports){
+},{"./support/isBuffer":32,"_process":31,"inherits":30}],34:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -22576,7 +23010,7 @@ function localstorage(){
   } catch (e) {}
 }
 
-},{"./debug":34}],34:[function(require,module,exports){
+},{"./debug":35}],35:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -22775,7 +23209,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":35}],35:[function(require,module,exports){
+},{"ms":36}],36:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -22902,7 +23336,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -23208,7 +23642,7 @@ function Adapter(options) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"bowser":40,"debug":33}],37:[function(require,module,exports){
+},{"bowser":41,"debug":34}],38:[function(require,module,exports){
 'use strict';
 
 // Expose the RTCPeerConnection class.
@@ -23555,7 +23989,11 @@ RTCPeerConnection.prototype.createDataChannel = function () {
 RTCPeerConnection.prototype.createDTMFSender = function (track) {
 	debug('createDTMFSender()');
 
-	return this.pc.createDTMFSender(track);
+	if (this.pc.createDTMFSender) {
+		return this.pc.createDTMFSender(track);
+	} else {
+		return null;
+	}
 };
 
 
@@ -23959,7 +24397,7 @@ function setProperties() {
 	});
 }
 
-},{"./Adapter":36,"debug":33,"merge":41}],38:[function(require,module,exports){
+},{"./Adapter":37,"debug":34,"merge":42}],39:[function(require,module,exports){
 'use strict';
 
 module.exports = rtcninja;
@@ -24049,14 +24487,14 @@ Object.defineProperty(rtcninja, 'called', {
 rtcninja.debug = require('debug');
 rtcninja.browser = browser;
 
-},{"./Adapter":36,"./RTCPeerConnection":37,"./version":39,"bowser":40,"debug":33}],39:[function(require,module,exports){
+},{"./Adapter":37,"./RTCPeerConnection":38,"./version":40,"bowser":41,"debug":34}],40:[function(require,module,exports){
 'use strict';
 
 // Expose the 'version' field of package.json.
 module.exports = require('../package.json').version;
 
 
-},{"../package.json":42}],40:[function(require,module,exports){
+},{"../package.json":43}],41:[function(require,module,exports){
 /*!
  * Bowser - a browser detector
  * https://github.com/ded/bowser
@@ -24436,6 +24874,7 @@ module.exports = require('../package.json').version;
         (result.opera && result.version >= 10.0) ||
         (result.ios && result.osversion && result.osversion.split(".")[0] >= 6) ||
         (result.blackberry && result.version >= 10.1)
+        || (result.chromium && result.version >= 20)
         ) {
       result.a = t;
     }
@@ -24445,6 +24884,7 @@ module.exports = require('../package.json').version;
         (result.safari && result.version < 6) ||
         (result.opera && result.version < 10.0) ||
         (result.ios && result.osversion && result.osversion.split(".")[0] < 6)
+        || (result.chromium && result.version < 20)
         ) {
       result.c = t
     } else result.x = t
@@ -24466,6 +24906,145 @@ module.exports = require('../package.json').version;
     return false;
   }
 
+  /**
+   * Get version precisions count
+   *
+   * @example
+   *   getVersionPrecision("1.10.3") // 3
+   *
+   * @param  {string} version
+   * @return {number}
+   */
+  function getVersionPrecision(version) {
+    return version.split(".").length;
+  }
+
+  /**
+   * Array::map polyfill
+   *
+   * @param  {Array} arr
+   * @param  {Function} iterator
+   * @return {Array}
+   */
+  function map(arr, iterator) {
+    var result = [], i;
+    if (Array.prototype.map) {
+      return Array.prototype.map.call(arr, iterator);
+    }
+    for (i = 0; i < arr.length; i++) {
+      result.push(iterator(arr[i]));
+    }
+    return result;
+  }
+
+  /**
+   * Calculate browser version weight
+   *
+   * @example
+   *   compareVersions(['1.10.2.1',  '1.8.2.1.90'])    // 1
+   *   compareVersions(['1.010.2.1', '1.09.2.1.90']);  // 1
+   *   compareVersions(['1.10.2.1',  '1.10.2.1']);     // 0
+   *   compareVersions(['1.10.2.1',  '1.0800.2']);     // -1
+   *
+   * @param  {Array<String>} versions versions to compare
+   * @return {Number} comparison result
+   */
+  function compareVersions(versions) {
+    // 1) get common precision for both versions, for example for "10.0" and "9" it should be 2
+    var precision = Math.max(getVersionPrecision(versions[0]), getVersionPrecision(versions[1]));
+    var chunks = map(versions, function (version) {
+      var delta = precision - getVersionPrecision(version);
+
+      // 2) "9" -> "9.0" (for precision = 2)
+      version = version + new Array(delta + 1).join(".0");
+
+      // 3) "9.0" -> ["000000000"", "000000009"]
+      return map(version.split("."), function (chunk) {
+        return new Array(20 - chunk.length).join("0") + chunk;
+      }).reverse();
+    });
+
+    // iterate in reverse order by reversed chunks array
+    while (--precision >= 0) {
+      // 4) compare: "000000009" > "000000010" = false (but "9" > "10" = true)
+      if (chunks[0][precision] > chunks[1][precision]) {
+        return 1;
+      }
+      else if (chunks[0][precision] === chunks[1][precision]) {
+        if (precision === 0) {
+          // all version chunks are same
+          return 0;
+        }
+      }
+      else {
+        return -1;
+      }
+    }
+  }
+
+  /**
+   * Check if browser is unsupported
+   *
+   * @example
+   *   bowser.isUnsupportedBrowser({
+   *     msie: "10",
+   *     firefox: "23",
+   *     chrome: "29",
+   *     safari: "5.1",
+   *     opera: "16",
+   *     phantom: "534"
+   *   });
+   *
+   * @param  {Object}  minVersions map of minimal version to browser
+   * @param  {Boolean} [strictMode = false] flag to return false if browser wasn't found in map
+   * @param  {String}  [ua] user agent string
+   * @return {Boolean}
+   */
+  function isUnsupportedBrowser(minVersions, strictMode, ua) {
+    var _bowser = bowser;
+
+    // make strictMode param optional with ua param usage
+    if (typeof strictMode === 'string') {
+      ua = strictMode;
+      strictMode = void(0);
+    }
+
+    if (strictMode === void(0)) {
+      strictMode = false;
+    }
+    if (ua) {
+      _bowser = detect(ua);
+    }
+
+    var version = "" + _bowser.version;
+    for (var browser in minVersions) {
+      if (minVersions.hasOwnProperty(browser)) {
+        if (_bowser[browser]) {
+          // browser version and min supported version.
+          return compareVersions([version, minVersions[browser]]) < 0;
+        }
+      }
+    }
+
+    return strictMode; // not found
+  }
+
+  /**
+   * Check if browser is supported
+   *
+   * @param  {Object} minVersions map of minimal version to browser
+   * @param  {Boolean} [strictMode = false] flag to return false if browser wasn't found in map
+   * @param  {String}  [ua] user agent string
+   * @return {Boolean}
+   */
+  function check(minVersions, strictMode, ua) {
+    return !isUnsupportedBrowser(minVersions, strictMode, ua);
+  }
+
+  bowser.isUnsupportedBrowser = isUnsupportedBrowser;
+  bowser.compareVersions = compareVersions;
+  bowser.check = check;
+
   /*
    * Set our detect method to the main bowser object so we can
    * reuse it to test other user agents.
@@ -24476,7 +25055,7 @@ module.exports = require('../package.json').version;
   return bowser
 });
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 /*!
  * @name JavaScript/NodeJS Merge v1.2.0
  * @author yeikos
@@ -24652,10 +25231,10 @@ module.exports = require('../package.json').version;
 	}
 
 })(typeof module === 'object' && module && typeof module.exports === 'object' && module.exports);
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 module.exports={
   "name": "rtcninja",
-  "version": "0.6.7",
+  "version": "0.6.8",
   "description": "WebRTC API wrapper to deal with different browsers",
   "author": {
     "name": "Iñaki Baz Castillo",
@@ -24682,7 +25261,7 @@ module.exports={
     "node": ">=0.10.32"
   },
   "dependencies": {
-    "bowser": "^1.2.0",
+    "bowser": "^1.4.1",
     "debug": "^2.2.0",
     "merge": "^1.2.0"
   },
@@ -24691,22 +25270,23 @@ module.exports={
     "gulp": "git+https://github.com/gulpjs/gulp.git#4.0",
     "gulp-expect-file": "0.0.7",
     "gulp-filelog": "^0.4.1",
-    "gulp-header": "^1.8.2",
+    "gulp-header": "^1.8.7",
     "gulp-jscs": "^3.0.2",
     "gulp-jscs-stylish": "^1.4.0",
     "gulp-jshint": "^2.0.1",
     "gulp-rename": "^1.2.2",
-    "gulp-uglify": "^1.5.3",
+    "gulp-uglify": "^1.5.4",
+    "jshint": "^2.9.2",
     "jshint-stylish": "^2.2.0",
     "vinyl-source-stream": "^1.1.0"
   },
-  "gitHead": "d36b02d0503ca152771692935a4096130f28dc5d",
+  "gitHead": "dc4fff27105a83126193e29c1c63d9cf0c54f099",
   "bugs": {
     "url": "https://github.com/eface2face/rtcninja.js/issues"
   },
-  "_id": "rtcninja@0.6.7",
+  "_id": "rtcninja@0.6.8",
   "scripts": {},
-  "_shasum": "f7c8855f2c0e41ae08c638375bad1dc977369ec2",
+  "_shasum": "2cb27f2b7b9a74450329d9b240959e4d5b308bbb",
   "_from": "rtcninja@>=0.6.7 <0.7.0",
   "_npmVersion": "2.14.20",
   "_nodeVersion": "4.4.1",
@@ -24715,8 +25295,8 @@ module.exports={
     "email": "ibc@aliax.net"
   },
   "dist": {
-    "shasum": "f7c8855f2c0e41ae08c638375bad1dc977369ec2",
-    "tarball": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.6.7.tgz"
+    "shasum": "2cb27f2b7b9a74450329d9b240959e4d5b308bbb",
+    "tarball": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.6.8.tgz"
   },
   "maintainers": [
     {
@@ -24726,13 +25306,14 @@ module.exports={
   ],
   "_npmOperationalInternal": {
     "host": "packages-16-east.internal.npmjs.com",
-    "tmp": "tmp/rtcninja-0.6.7.tgz_1464431140092_0.9943081210367382"
+    "tmp": "tmp/rtcninja-0.6.8.tgz_1468236144989_0.6427697774488479"
   },
   "directories": {},
-  "_resolved": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.6.7.tgz"
+  "_resolved": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.6.8.tgz",
+  "readme": "ERROR: No README data found!"
 }
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
       name: 'version',
@@ -25001,7 +25582,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 
@@ -25011,7 +25592,7 @@ exports.parseFmtpConfig = parser.parseFmtpConfig;
 exports.parsePayloads = parser.parsePayloads;
 exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 
-},{"./parser":45,"./writer":46}],45:[function(require,module,exports){
+},{"./parser":46,"./writer":47}],46:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -25106,7 +25687,7 @@ exports.parseRemoteCandidates = function (str) {
   return candidates;
 };
 
-},{"./grammar":43}],46:[function(require,module,exports){
+},{"./grammar":44}],47:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -25222,7 +25803,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":43}],47:[function(require,module,exports){
+},{"./grammar":44}],48:[function(require,module,exports){
 module.exports={
   "name": "jssip",
   "title": "JsSIP",
