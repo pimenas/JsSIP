@@ -156,6 +156,11 @@ module.exports = {
     test.strictEqual(name.user, undefined);
 
     test.done();
+  },
+
+  'new Subscriber': function(test) {
+    var subscriber = new JsSIP.Subscriber();
+    test.done();
   }
 
 };
