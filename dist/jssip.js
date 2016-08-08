@@ -18098,6 +18098,10 @@ Socket.isSocket = function(socket) {
 module.exports = Subscriber;
 
 var debug = require('debug')('JsSIP:Subscriber');
+var JsSIP_C = require('./Constants');
+var RequestSender = require('./RequestSender');
+var SIPMessage = require('./SIPMessage');
+var Utils = require('./Utils');
 
 function Subscriber(ua) {
     debug('new');
@@ -18105,17 +18109,23 @@ function Subscriber(ua) {
 }
 
 Subscriber.prototype.subscribe = function(uri, options) {
-    debug('subscribe to ' + uri + ' with options: ', options);
-    var conferenceInfoXml = '<conference-info version="0" state="full" entity="' + uri + '">' +
-        '</conference-info>';
+    debug('subscribing to ' + uri + ' with options: ', options);
 
-    if (!this.ua) {
-        debug('null ua');
-    }
+    var requestParams = {from_tag: Utils.newTag()};
+    var extraHeaders = !!options && !!options.extraHeaders ? options.extraHeaders : [];
+    var request = new SIPMessage.OutgoingRequest(JsSIP_C.INVITE, uri, this.ua, requestParams, extraHeaders);
 
-    if (!!options && !!options.eventHandlers && !!options.eventHandlers.notify) {
-        options.eventHandlers.notify({ conferenceInfoXml: conferenceInfoXml });
-    }
+    var applicant = {
+        method: 'SUBSCRIBE',
+        request: request,
+        auth: null,
+        challenged: false,
+        stalled: false
+    };
+
+    var requestSender = new RequestSender(applicant, this.ua);
+
+    requestSender.send();
 };
 
 Subscriber.test = { };
@@ -18526,7 +18536,7 @@ Subscriber.test = { };
 //   }
 // };
 
-},{"debug":34}],21:[function(require,module,exports){
+},{"./Constants":1,"./RequestSender":17,"./SIPMessage":18,"./Utils":26,"debug":34}],21:[function(require,module,exports){
 var T1 = 500,
   T2 = 4000,
   T4 = 5000;
