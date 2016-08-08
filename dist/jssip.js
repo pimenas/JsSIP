@@ -18097,9 +18097,23 @@ Socket.isSocket = function(socket) {
 },{"./Grammar":6,"./Utils":26,"debug":34}],20:[function(require,module,exports){
 module.exports = Subscriber;
 
-function Subscriber() { }
+function Subscriber(ua) {
+    this.ua = ua;
+}
 
-Subscriber.prototype = { };
+Subscriber.prototype.subscribe = function(uri, options) {
+    console.log('subscribe to ' + uri + ' with options: ', options);
+    var conferenceInfoXml = '<conference-info version="0" state="full" entity="' + uri + '">' +
+        '</conference-info>';
+
+    if (!this.ua) {
+        console.log('null ua');
+    }
+
+    if (!!options && !!options.eventHandlers && !!options.eventHandlers.notify) {
+        options.eventHandlers.notify(conferenceInfoXml);
+    }
+};
 
 Subscriber.test = { };
 // JsSIP.Subscriber = function(ua) {
@@ -19562,6 +19576,7 @@ var Grammar = require('./Grammar');
 var Parser = require('./Parser');
 var SIPMessage = require('./SIPMessage');
 var sanityCheck = require('./sanityCheck');
+var Subscriber = require('./Subscriber');
 
 
 
@@ -19769,6 +19784,21 @@ UA.prototype.call = function(target, options) {
   session = new RTCSession(this);
   session.connect(target, options);
   return session;
+};
+
+/**
+ * Subscribe for events
+ *
+ * -param {String} uri
+ * -param {Object} [options]
+ */
+UA.prototype.subscribe = function(uri, options) {
+  debug('subscribe()');
+
+  var subscriber;
+  subscriber = new Subscriber(this);
+  subscriber.subscribe(uri, options);
+  return subscriber;
 };
 
 /**
@@ -20790,7 +20820,7 @@ function onTransportData(data) {
  }
 }
 
-},{"./Constants":1,"./Exceptions":5,"./Grammar":6,"./Message":8,"./Parser":10,"./RTCSession":11,"./Registrator":16,"./SIPMessage":18,"./Socket":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./WebSocketInterface":27,"./sanityCheck":28,"debug":34,"events":29,"rtcninja":39,"util":33}],25:[function(require,module,exports){
+},{"./Constants":1,"./Exceptions":5,"./Grammar":6,"./Message":8,"./Parser":10,"./RTCSession":11,"./Registrator":16,"./SIPMessage":18,"./Socket":19,"./Subscriber":20,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./WebSocketInterface":27,"./sanityCheck":28,"debug":34,"events":29,"rtcninja":39,"util":33}],25:[function(require,module,exports){
 module.exports = URI;
 
 
