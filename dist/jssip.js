@@ -18113,7 +18113,7 @@ Subscriber.prototype.subscribe = function(uri, options) {
 
     var requestParams = {from_tag: Utils.newTag()};
     var extraHeaders = !!options && !!options.extraHeaders ? options.extraHeaders : [];
-    var request = new SIPMessage.OutgoingRequest(JsSIP_C.INVITE, uri, this.ua, requestParams, extraHeaders);
+    var request = new SIPMessage.OutgoingRequest(JsSIP_C.SUBSCRIBE, uri, this.ua, requestParams, extraHeaders);
 
     var applicant = {
         method: 'SUBSCRIBE',
