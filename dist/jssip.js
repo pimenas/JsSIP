@@ -15599,6 +15599,19 @@ function receiveNotify(request) {
       break;
     }
 
+    case 'conference': {
+        if (!!this.conferenceSubscribers) {
+            this.conferenceSubscribers.forEach(function (subscriber) {
+                debug('received req: ', request);
+                subscriber({conferenceInfo: request.body});
+            });
+        }
+
+        request.reply(200);
+        
+        break;
+    }
+
     default: {
       request.reply(489);
     }
@@ -18131,6 +18144,10 @@ Subscriber.prototype.subscribe = function(uri, options) {
     rtcSession.request = request;
     rtcSession.from_tag = requestParams.from_tag;
     rtcSession.id = rtcSession.request.call_id + rtcSession.from_tag;
+    rtcSession.conferenceSubscribers = [];
+    if (!!options && !!options.eventHandlers && !!options.eventHandlers.notify) {
+        rtcSession.conferenceSubscribers.push(options.eventHandlers.notify);
+    }
 
     // Save the session into the ua sessions collection.
     this.ua.sessions[rtcSession.id] = rtcSession;
