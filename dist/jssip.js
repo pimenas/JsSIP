@@ -18097,17 +18097,20 @@ Socket.isSocket = function(socket) {
 },{"./Grammar":6,"./Utils":26,"debug":34}],20:[function(require,module,exports){
 module.exports = Subscriber;
 
+var debug = require('debug')('JsSIP:Subscriber');
+
 function Subscriber(ua) {
+    debug('new');
     this.ua = ua;
 }
 
 Subscriber.prototype.subscribe = function(uri, options) {
-    console.log('subscribe to ' + uri + ' with options: ', options);
+    debug('subscribe to ' + uri + ' with options: ', options);
     var conferenceInfoXml = '<conference-info version="0" state="full" entity="' + uri + '">' +
         '</conference-info>';
 
     if (!this.ua) {
-        console.log('null ua');
+        debug('null ua');
     }
 
     if (!!options && !!options.eventHandlers && !!options.eventHandlers.notify) {
@@ -18523,7 +18526,7 @@ Subscriber.test = { };
 //   }
 // };
 
-},{}],21:[function(require,module,exports){
+},{"debug":34}],21:[function(require,module,exports){
 var T1 = 500,
   T2 = 4000,
   T4 = 5000;
