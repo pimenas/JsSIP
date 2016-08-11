@@ -15608,7 +15608,7 @@ function receiveNotify(request) {
         }
 
         request.reply(200);
-        
+
         break;
     }
 
@@ -15702,7 +15702,11 @@ function sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream) 
     });
 
     connecting.call(self, self.request);
-    createLocalDescription.call(self, 'offer', rtcSucceeded, rtcFailed, rtcOfferConstraints);
+    if (stream) {
+        createLocalDescription.call(self, 'offer', rtcSucceeded, rtcFailed, rtcOfferConstraints);
+    } else {
+        rtcSucceeded(null);
+    }
   }
 
   // User media failed
