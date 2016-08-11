@@ -15870,6 +15870,7 @@ function receiveInviteResponse(response) {
         accepted.call(self, 'remote', response);
         sendRequest.call(self, JsSIP_C.ACK);
         confirmed.call(self, 'local', null);
+        break;
       }
 
       this.connection.setRemoteDescription(
