@@ -15849,18 +15849,13 @@ function receiveInviteResponse(response) {
     case /^2[0-9]{2}$/.test(response.status_code):
       this.status = C.STATUS_CONFIRMED;
 
-      if(!response.body) {
-        handleSessionTimersInIncomingResponse.call(self, response);
-        accepted.call(self, 'remote', response);
-        sendRequest.call(self, JsSIP_C.ACK);
-        confirmed.call(self, 'local', null);
-      }
-
+      /*
       if(!response.body) {
         acceptAndTerminate.call(this, response, 400, JsSIP_C.causes.MISSING_SDP);
         failed.call(this, 'remote', response, JsSIP_C.causes.BAD_MEDIA_DESCRIPTION);
         break;
       }
+      */
 
       // An error on dialog creation will fire 'failed' event
       if (! createDialog.call(this, response, 'UAC')) {
@@ -15869,6 +15864,13 @@ function receiveInviteResponse(response) {
 
       e = {originator:'remote', type:'answer', sdp:response.body};
       this.emit('sdp', e);
+
+      if(!response.body) {
+        handleSessionTimersInIncomingResponse.call(self, response);
+        accepted.call(self, 'remote', response);
+        sendRequest.call(self, JsSIP_C.ACK);
+        confirmed.call(self, 'local', null);
+      }
 
       this.connection.setRemoteDescription(
         new rtcninja.RTCSessionDescription({type:'answer', sdp:e.sdp}),
