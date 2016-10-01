@@ -1,6 +1,1 @@
-declare module 'jssip' {
-    var JsSIP: any;
-    export = JsSIP;
-}
-
-
+export declare var JsSIP: any;
