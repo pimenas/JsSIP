@@ -1,4 +1,4 @@
-export JsSIP;
+export = JsSIP;
 
 declare namespace JsSIP {
     class WebSocketInterface {
