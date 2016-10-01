@@ -1,1 +1,7 @@
-export declare var JsSIP: any;
+export JsSIP;
+
+declare namespace JsSIP {
+    var WebSocketInterface;
+    var UA;
+}
+
