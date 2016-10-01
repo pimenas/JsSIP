@@ -1,7 +1,12 @@
 export JsSIP;
 
 declare namespace JsSIP {
-    var WebSocketInterface;
-    var UA;
+    class WebSocketInterface {
+        constructor(url: string);
+    }
+
+    class UA {
+        constructor(config: any);
+    }
 }
 
