@@ -17016,10 +17016,10 @@ function Registrator(ua, transport) {
   this.extraContactParams = '';
 
   // Optional Register body.
-  this.registerBody = '';
+  this.body = '';
 
   // Register body Content-Type header value.
-  this.registerContentType = '';
+  this.contentType = '';
 
   if(reg_id) {
     this.contact += ';reg-id='+ reg_id;
@@ -17054,12 +17054,12 @@ Registrator.prototype = {
     }
   },
 
-  setRegisterBody: function(registerBody) {
-      this.registerBody = registerBody;
+  setBody: function(body) {
+      this.body = body;
   },
 
-  setRegisterContentType: function(registerContentType) {
-      this.registerContentType = registerContentType;
+  setContentType: function(contentType) {
+      this.contentType = contentType;
   },
 
   register: function() {
@@ -17070,15 +17070,15 @@ Registrator.prototype = {
     extraHeaders.push('Contact: ' + this.contact + ';expires=' + this.expires + this.extraContactParams);
     extraHeaders.push('Expires: '+ this.expires);
 
-    if (this.registerContentType) {
-        extraHeaders.push('Content-Type: ' + this.registerContentType);
+    if (this.contentType) {
+        extraHeaders.push('Content-Type: ' + this.contentType);
     }
 
     this.request = new SIPMessage.OutgoingRequest(JsSIP_C.REGISTER, this.registrar, this.ua, {
         'to_uri': this.to_uri,
         'call_id': this.call_id,
         'cseq': (this.cseq += 1)
-      }, extraHeaders, this.registerBody);
+      }, extraHeaders, this.body);
 
     request_sender = new RequestSender(this, this.ua);
 
