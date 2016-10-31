@@ -1,6 +1,30 @@
 CHANGELOG
 =========
 
+Version 2.0.6 (released in 2016-09-30)
+--------------------------------------
+
+* Improve library logs.
+
+
+Version 2.0.5 (released in 2016-09-28)
+--------------------------------------
+
+* Update dependencies.
+
+
+Version 2.0.4 (released in 2016-09-15)
+--------------------------------------
+
+* Fix #400. Corrupt NPM packege.
+
+
+Version 2.0.3 (released in 2016-08-23)
+--------------------------------------
+
+* Fix #385. No CANCEL request sent for authenticated requests.
+
+
 Version 2.0.2 (released in 2016-06-17)
 --------------------------------------
 

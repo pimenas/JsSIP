@@ -1,5 +1,5 @@
 /*
- * JsSIP v2.0.2
+ * JsSIP v2.0.6
  * the Javascript SIP library
  * Copyright: 2012-2016 José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)
  * Homepage: http://jssip.net
@@ -17424,7 +17424,7 @@ RequestSender.prototype = {
           cseq = this.request.cseq + 1;
         }
 
-        this.request = this.request.clone();
+        this.request = this.applicant.request = this.request.clone();
 
         this.request.cseq = cseq;
         this.request.setHeader('cseq', cseq +' '+ this.method);
@@ -18095,10 +18095,16 @@ module.exports = Socket;
 var Utils = require('./Utils');
 var Grammar = require('./Grammar');
 var debugerror = require('debug')('JsSIP:ERROR:Socket');
+debugerror.log = console.warn.bind(console);
 
 function Socket() {}
 
 Socket.isSocket = function(socket) {
+  // Ignore if an array is given
+  if (Array.isArray(socket)) {
+    return false;
+  }
+
   if (typeof socket === 'undefined') {
     debugerror('undefined JsSIP.Socket instance');
     return false;
@@ -19680,6 +19686,8 @@ var Subscriber = require('./Subscriber');
  * @throws {TypeError} If no configuration is given.
  */
 function UA(configuration) {
+  debug('new() [configuration:%o]', configuration);
+
   this.cache = {
     credentials: {}
   };
@@ -21548,9 +21556,10 @@ module.exports = WebSocketInterface;
 var Grammar = require('./Grammar');
 var debug = require('debug')('JsSIP:WebSocketInterface');
 var debugerror = require('debug')('JsSIP:ERROR:WebSocketInterface');
+debugerror.log = console.warn.bind(console);
 
 function WebSocketInterface(url) {
-  debug('new()');
+  debug('new() [url:"%s"]', url);
 
   var sip_uri = null;
   var via_transport = null;
@@ -25995,7 +26004,7 @@ module.exports={
   "name": "jssip",
   "title": "JsSIP",
   "description": "the Javascript SIP library",
-  "version": "2.0.2",
+  "version": "2.0.6",
   "homepage": "http://jssip.net",
   "author": "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
   "contributors": [
@@ -26022,21 +26031,21 @@ module.exports={
   },
   "dependencies": {
     "debug": "^2.2.0",
-    "rtcninja": "^0.6.7",
+    "rtcninja": "^0.7.0",
     "sdp-transform": "^1.6.2"
   },
   "devDependencies": {
-    "browserify": "^13.0.1",
+    "browserify": "^13.1.0",
     "gulp": "git+https://github.com/gulpjs/gulp.git#4.0",
     "gulp-expect-file": "0.0.7",
-    "gulp-header": "1.8.2",
+    "gulp-header": "1.8.8",
     "gulp-jshint": "^2.0.1",
     "gulp-nodeunit-runner": "^0.2.2",
     "gulp-rename": "^1.2.2",
-    "gulp-uglify": "^1.5.3",
+    "gulp-uglify": "^2.0.0",
     "gulp-util": "^3.0.7",
-    "jshint": "^2.9.2",
-    "jshint-stylish": "^2.2.0",
+    "jshint": "^2.9.3",
+    "jshint-stylish": "^2.2.1",
     "pegjs": "0.7.0",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0"
