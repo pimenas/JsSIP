@@ -13721,6 +13721,9 @@ function RTCSession(ua) {
   // Custom session empty object for high level use
   this.data = {};
 
+  // Stores candidates to send them when session is established using sip info
+  this.candidates = [];
+
   events.EventEmitter.call(this);
 }
 
@@ -14816,6 +14819,8 @@ RTCSession.prototype.receiveRequest = function(request) {
   debug('receiveRequest()');
 
   var contentType,
+      infoPackage,
+      candidate,
       self = this;
 
   if(request.method === JsSIP_C.CANCEL) {
@@ -14914,8 +14919,17 @@ RTCSession.prototype.receiveRequest = function(request) {
       case JsSIP_C.INFO:
         if(this.status === C.STATUS_CONFIRMED || this.status === C.STATUS_WAITING_FOR_ACK || this.status === C.STATUS_INVITE_RECEIVED) {
           contentType = request.getHeader('content-type');
+          infoPackage = request.getHeader('info-package');
           if (contentType && (contentType.match(/^application\/dtmf-relay/i))) {
             new RTCSession_DTMF(this).init_incoming(request);
+          }
+          else if (contentType && (contentType.match(/^application\/json/i)) &&
+                   infoPackage && (infoPackage.match(/^ice-candidates/i))) {
+
+            candidate = new rtcninja.RTCIceCandidate(JSON.parse(request.body));
+            this.connection.addIceCandidate(candidate);
+
+            request.reply(200, 'Candidate added');
           }
           else {
             request.reply(415);
@@ -15141,6 +15155,19 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
   // createAnswer or createOffer succeeded
   function createSucceeded(desc) {
     connection.onicecandidate = function(event, candidate) {
+      if (candidate && self.ua.configuration.use_info_for_ice) {
+
+          if (self.is_confirmed) {
+              debug('sending candidate: %s',  JSON.stringify(candidate));
+              sendCandidates.call(self, [candidate]);
+          } else {
+              debug('pushing to candidates: %s', JSON.stringify(candidate));
+              self.candidates.push(candidate);
+          }
+
+          return;
+      }
+
       if (! candidate) {
         connection.onicecandidate = null;
         self.rtcReady = true;
@@ -15157,7 +15184,7 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
     connection.setLocalDescription(desc,
       // success
       function() {
-        if (connection.iceGatheringState === 'complete') {
+        if (connection.iceGatheringState === 'complete' || self.ua.configuration.use_info_for_ice) {
           self.rtcReady = true;
 
           if (onSuccess) {
@@ -16416,6 +16443,10 @@ function confirmed(originator, ack) {
 
   this.is_confirmed = true;
 
+  if (this.ua.configuration.use_info_for_ice) {
+      sendCandidates.call(this);
+  }
+
   this.emit('confirmed', {
     originator: originator,
     ack: ack || null
@@ -16486,6 +16517,35 @@ function onunmute(options) {
     audio: options.audio,
     video: options.video
   });
+}
+
+function sendCandidates(candidate) {
+    debug('sendCandidates(%s)', JSON.stringify(candidate));
+
+    var i;
+    for (i = 0; i < this.candidates.length; i++) {
+        sendCandidate.call(this, this.candidates[i]);
+    }
+
+    this.candidates = [];
+
+    sendCandidate.call(this, candidate);
+}
+
+function sendCandidate(candidate) {
+    debug('sendCandidate(%s)', JSON.stringify(candidate));
+
+    var extraHeaders = [
+        'Content-Type: application/json',
+        'Content-Disposition: Info-Package',
+        'Info-Package: ice-candidates'
+    ];
+
+    debug('status in sendCandidate: %d', this.status);
+    sendRequest.call(this, JsSIP_C.INFO, {
+        extraHeaders: extraHeaders,
+        body: JSON.stringify(candidate)
+    });
 }
 
 },{"./Constants":1,"./Dialog":2,"./Exceptions":5,"./RTCSession/DTMF":12,"./RTCSession/ReferNotifier":13,"./RTCSession/ReferSubscriber":14,"./RTCSession/Request":15,"./RequestSender":17,"./SIPMessage":18,"./Timers":21,"./Transactions":22,"./Utils":26,"debug":34,"events":29,"rtcninja":39,"sdp-transform":45,"util":33}],12:[function(require,module,exports){
@@ -20356,6 +20416,9 @@ UA.prototype.loadConfig = function(configuration) {
     // Session parameters
     no_answer_timeout: 60,
     session_timers: true,
+
+    // optimizations
+    use_info_for_ice: false,
   };
 
   // Pre-Configuration
@@ -20570,6 +20633,7 @@ UA.configuration_skeleton = (function() {
       'sockets',
       'use_preloaded_route',
       'ws_servers',
+      'use_info_for_ice',
 
 
       // Post-configuration generated parameters
@@ -20817,7 +20881,14 @@ UA.configuration_check = {
       }
 
       return sockets;
+    },
+
+    use_info_for_ice: function(use_info_for_ice) {
+      if (typeof use_info_for_ice === 'boolean') {
+        return use_info_for_ice;
+      }
     }
+
   }
 };
 
