@@ -162,7 +162,7 @@ var C = {
 
 module.exports = C;
 
-},{"../package.json":40}],2:[function(require,module,exports){
+},{"../package.json":47}],2:[function(require,module,exports){
 module.exports = Dialog;
 
 
@@ -12990,7 +12990,7 @@ Object.defineProperties(JsSIP, {
   }
 });
 
-},{"../package.json":40,"./Constants":1,"./Exceptions":5,"./Grammar":6,"./NameAddrHeader":9,"./UA":23,"./URI":24,"./Utils":25,"./WebSocketInterface":26,"debug":33,"rtcninja":43}],8:[function(require,module,exports){
+},{"../package.json":47,"./Constants":1,"./Exceptions":5,"./Grammar":6,"./NameAddrHeader":9,"./UA":23,"./URI":24,"./Utils":25,"./WebSocketInterface":26,"debug":33,"rtcninja":38}],8:[function(require,module,exports){
 module.exports = Message;
 
 
@@ -13718,6 +13718,9 @@ function RTCSession(ua) {
 
   // Custom session empty object for high level use
   this.data = {};
+
+  // Stores candidates to send them when session is established using sip info
+  this.candidates = [];
 
   events.EventEmitter.call(this);
 }
@@ -14814,6 +14817,8 @@ RTCSession.prototype.receiveRequest = function(request) {
   debug('receiveRequest()');
 
   var contentType,
+      infoPackage,
+      candidate,
       self = this;
 
   if(request.method === JsSIP_C.CANCEL) {
@@ -14912,8 +14917,17 @@ RTCSession.prototype.receiveRequest = function(request) {
       case JsSIP_C.INFO:
         if(this.status === C.STATUS_CONFIRMED || this.status === C.STATUS_WAITING_FOR_ACK || this.status === C.STATUS_INVITE_RECEIVED) {
           contentType = request.getHeader('content-type');
+          infoPackage = request.getHeader('info-package');
           if (contentType && (contentType.match(/^application\/dtmf-relay/i))) {
             new RTCSession_DTMF(this).init_incoming(request);
+          }
+          else if (contentType && (contentType.match(/^application\/json/i)) &&
+                   infoPackage && (infoPackage.match(/^ice-candidates/i))) {
+
+            candidate = new rtcninja.RTCIceCandidate(JSON.parse(request.body));
+            this.connection.addIceCandidate(candidate);
+
+            request.reply(200, 'Candidate added');
           }
           else {
             request.reply(415);
@@ -15139,6 +15153,19 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
   // createAnswer or createOffer succeeded
   function createSucceeded(desc) {
     connection.onicecandidate = function(event, candidate) {
+      if (candidate && self.ua.configuration.use_info_for_ice) {
+
+          if (self.is_confirmed) {
+              debug('sending candidate: %s',  JSON.stringify(candidate));
+              sendCandidates.call(self, [candidate]);
+          } else {
+              debug('pushing to candidates: %s', JSON.stringify(candidate));
+              self.candidates.push(candidate);
+          }
+
+          return;
+      }
+
       if (! candidate) {
         connection.onicecandidate = null;
         self.rtcReady = true;
@@ -15155,7 +15182,7 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
     connection.setLocalDescription(desc,
       // success
       function() {
-        if (connection.iceGatheringState === 'complete') {
+        if (connection.iceGatheringState === 'complete' || self.ua.configuration.use_info_for_ice) {
           self.rtcReady = true;
 
           if (onSuccess) {
@@ -16387,6 +16414,10 @@ function confirmed(originator, ack) {
 
   this.is_confirmed = true;
 
+  if (this.ua.configuration.use_info_for_ice) {
+      sendCandidates.call(this);
+  }
+
   this.emit('confirmed', {
     originator: originator,
     ack: ack || null
@@ -16459,7 +16490,36 @@ function onunmute(options) {
   });
 }
 
-},{"./Constants":1,"./Dialog":2,"./Exceptions":5,"./RTCSession/DTMF":12,"./RTCSession/ReferNotifier":13,"./RTCSession/ReferSubscriber":14,"./RTCSession/Request":15,"./RequestSender":17,"./SIPMessage":18,"./Timers":20,"./Transactions":21,"./Utils":25,"debug":33,"events":28,"rtcninja":43,"sdp-transform":37,"util":32}],12:[function(require,module,exports){
+function sendCandidates(candidate) {
+    debug('sendCandidates(%s)', JSON.stringify(candidate));
+
+    var i;
+    for (i = 0; i < this.candidates.length; i++) {
+        sendCandidate.call(this, this.candidates[i]);
+    }
+
+    this.candidates = [];
+
+    sendCandidate.call(this, candidate);
+}
+
+function sendCandidate(candidate) {
+    debug('sendCandidate(%s)', JSON.stringify(candidate));
+
+    var extraHeaders = [
+        'Content-Type: application/json',
+        'Content-Disposition: Info-Package',
+        'Info-Package: ice-candidates'
+    ];
+
+    debug('status in sendCandidate: %d', this.status);
+    sendRequest.call(this, JsSIP_C.INFO, {
+        extraHeaders: extraHeaders,
+        body: JSON.stringify(candidate)
+    });
+}
+
+},{"./Constants":1,"./Dialog":2,"./Exceptions":5,"./RTCSession/DTMF":12,"./RTCSession/ReferNotifier":13,"./RTCSession/ReferSubscriber":14,"./RTCSession/Request":15,"./RequestSender":17,"./SIPMessage":18,"./Timers":20,"./Transactions":21,"./Utils":25,"debug":33,"events":28,"rtcninja":38,"sdp-transform":44,"util":32}],12:[function(require,module,exports){
 module.exports = DTMF;
 
 
@@ -18019,7 +18079,7 @@ function IncomingResponse() {
 
 IncomingResponse.prototype = new IncomingMessage();
 
-},{"./Constants":1,"./Grammar":6,"./NameAddrHeader":9,"./Utils":25,"debug":33,"sdp-transform":37}],19:[function(require,module,exports){
+},{"./Constants":1,"./Grammar":6,"./NameAddrHeader":9,"./Utils":25,"debug":33,"sdp-transform":44}],19:[function(require,module,exports){
 module.exports = Socket;
 
 /**
@@ -19817,6 +19877,9 @@ UA.prototype.loadConfig = function(configuration) {
     // Session parameters
     no_answer_timeout: 60,
     session_timers: true,
+
+    // optimizations
+    use_info_for_ice: false,
   };
 
   // Pre-Configuration
@@ -20031,6 +20094,7 @@ UA.configuration_skeleton = (function() {
       'sockets',
       'use_preloaded_route',
       'ws_servers',
+      'use_info_for_ice',
 
 
       // Post-configuration generated parameters
@@ -20278,7 +20342,14 @@ UA.configuration_check = {
       }
 
       return sockets;
+    },
+
+    use_info_for_ice: function(use_info_for_ice) {
+      if (typeof use_info_for_ice === 'boolean') {
+        return use_info_for_ice;
+      }
     }
+
   }
 };
 
@@ -20381,7 +20452,7 @@ function onTransportData(data) {
  }
 }
 
-},{"./Constants":1,"./Exceptions":5,"./Grammar":6,"./Message":8,"./Parser":10,"./RTCSession":11,"./Registrator":16,"./SIPMessage":18,"./Socket":19,"./Transactions":21,"./Transport":22,"./URI":24,"./Utils":25,"./WebSocketInterface":26,"./sanityCheck":27,"debug":33,"events":28,"rtcninja":43,"util":32}],24:[function(require,module,exports){
+},{"./Constants":1,"./Exceptions":5,"./Grammar":6,"./Message":8,"./Parser":10,"./RTCSession":11,"./Registrator":16,"./SIPMessage":18,"./Socket":19,"./Transactions":21,"./Transport":22,"./URI":24,"./Utils":25,"./WebSocketInterface":26,"./sanityCheck":27,"debug":33,"events":28,"rtcninja":38,"util":32}],24:[function(require,module,exports){
 module.exports = URI;
 
 
@@ -22977,551 +23048,6 @@ function plural(ms, n, name) {
 }
 
 },{}],36:[function(require,module,exports){
-var grammar = module.exports = {
-  v: [{
-      name: 'version',
-      reg: /^(\d*)$/
-  }],
-  o: [{ //o=- 20518 0 IN IP4 203.0.113.1
-    // NB: sessionId will be a String in most cases because it is huge
-    name: 'origin',
-    reg: /^(\S*) (\d*) (\d*) (\S*) IP(\d) (\S*)/,
-    names: ['username', 'sessionId', 'sessionVersion', 'netType', 'ipVer', 'address'],
-    format: "%s %s %d %s IP%d %s"
-  }],
-  // default parsing of these only (though some of these feel outdated)
-  s: [{ name: 'name' }],
-  i: [{ name: 'description' }],
-  u: [{ name: 'uri' }],
-  e: [{ name: 'email' }],
-  p: [{ name: 'phone' }],
-  z: [{ name: 'timezones' }], // TODO: this one can actually be parsed properly..
-  r: [{ name: 'repeats' }],   // TODO: this one can also be parsed properly
-  //k: [{}], // outdated thing ignored
-  t: [{ //t=0 0
-    name: 'timing',
-    reg: /^(\d*) (\d*)/,
-    names: ['start', 'stop'],
-    format: "%d %d"
-  }],
-  c: [{ //c=IN IP4 10.47.197.26
-      name: 'connection',
-      reg: /^IN IP(\d) (\S*)/,
-      names: ['version', 'ip'],
-      format: "IN IP%d %s"
-  }],
-  b: [{ //b=AS:4000
-      push: 'bandwidth',
-      reg: /^(TIAS|AS|CT|RR|RS):(\d*)/,
-      names: ['type', 'limit'],
-      format: "%s:%s"
-  }],
-  m: [{ //m=video 51744 RTP/AVP 126 97 98 34 31
-      // NB: special - pushes to session
-      // TODO: rtp/fmtp should be filtered by the payloads found here?
-      reg: /^(\w*) (\d*) ([\w\/]*)(?: (.*))?/,
-      names: ['type', 'port', 'protocol', 'payloads'],
-      format: "%s %d %s %s"
-  }],
-  a: [
-    { //a=rtpmap:110 opus/48000/2
-      push: 'rtp',
-      reg: /^rtpmap:(\d*) ([\w\-\.]*)(?:\s*\/(\d*)(?:\s*\/(\S*))?)?/,
-      names: ['payload', 'codec', 'rate', 'encoding'],
-      format: function (o) {
-        return (o.encoding) ?
-          "rtpmap:%d %s/%s/%s":
-          o.rate ?
-          "rtpmap:%d %s/%s":
-          "rtpmap:%d %s";
-      }
-    },
-    {
-      //a=fmtp:108 profile-level-id=24;object=23;bitrate=64000
-      //a=fmtp:111 minptime=10; useinbandfec=1
-      push: 'fmtp',
-      reg: /^fmtp:(\d*) ([\S| ]*)/,
-      names: ['payload', 'config'],
-      format: "fmtp:%d %s"
-    },
-    { //a=control:streamid=0
-        name: 'control',
-        reg: /^control:(.*)/,
-        format: "control:%s"
-    },
-    { //a=rtcp:65179 IN IP4 193.84.77.194
-      name: 'rtcp',
-      reg: /^rtcp:(\d*)(?: (\S*) IP(\d) (\S*))?/,
-      names: ['port', 'netType', 'ipVer', 'address'],
-      format: function (o) {
-        return (o.address != null) ?
-          "rtcp:%d %s IP%d %s":
-          "rtcp:%d";
-      }
-    },
-    { //a=rtcp-fb:98 trr-int 100
-      push: 'rtcpFbTrrInt',
-      reg: /^rtcp-fb:(\*|\d*) trr-int (\d*)/,
-      names: ['payload', 'value'],
-      format: "rtcp-fb:%d trr-int %d"
-    },
-    { //a=rtcp-fb:98 nack rpsi
-      push: 'rtcpFb',
-      reg: /^rtcp-fb:(\*|\d*) ([\w-_]*)(?: ([\w-_]*))?/,
-      names: ['payload', 'type', 'subtype'],
-      format: function (o) {
-        return (o.subtype != null) ?
-          "rtcp-fb:%s %s %s":
-          "rtcp-fb:%s %s";
-      }
-    },
-    { //a=extmap:2 urn:ietf:params:rtp-hdrext:toffset
-      //a=extmap:1/recvonly URI-gps-string
-      push: 'ext',
-      reg: /^extmap:([\w_\/]*) (\S*)(?: (\S*))?/,
-      names: ['value', 'uri', 'config'], // value may include "/direction" suffix
-      format: function (o) {
-        return (o.config != null) ?
-          "extmap:%s %s %s":
-          "extmap:%s %s";
-      }
-    },
-    {
-      //a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:PS1uQCVeeCFCanVmcjkpPywjNWhcYD0mXXtxaVBR|2^20|1:32
-      push: 'crypto',
-      reg: /^crypto:(\d*) ([\w_]*) (\S*)(?: (\S*))?/,
-      names: ['id', 'suite', 'config', 'sessionConfig'],
-      format: function (o) {
-        return (o.sessionConfig != null) ?
-          "crypto:%d %s %s %s":
-          "crypto:%d %s %s";
-      }
-    },
-    { //a=setup:actpass
-      name: 'setup',
-      reg: /^setup:(\w*)/,
-      format: "setup:%s"
-    },
-    { //a=mid:1
-      name: 'mid',
-      reg: /^mid:([^\s]*)/,
-      format: "mid:%s"
-    },
-    { //a=msid:0c8b064d-d807-43b4-b434-f92a889d8587 98178685-d409-46e0-8e16-7ef0db0db64a
-      name: 'msid',
-      reg: /^msid:(.*)/,
-      format: "msid:%s"
-    },
-    { //a=ptime:20
-      name: 'ptime',
-      reg: /^ptime:(\d*)/,
-      format: "ptime:%d"
-    },
-    { //a=maxptime:60
-      name: 'maxptime',
-      reg: /^maxptime:(\d*)/,
-      format: "maxptime:%d"
-    },
-    { //a=sendrecv
-      name: 'direction',
-      reg: /^(sendrecv|recvonly|sendonly|inactive)/
-    },
-    { //a=ice-lite
-      name: 'icelite',
-      reg: /^(ice-lite)/
-    },
-    { //a=ice-ufrag:F7gI
-      name: 'iceUfrag',
-      reg: /^ice-ufrag:(\S*)/,
-      format: "ice-ufrag:%s"
-    },
-    { //a=ice-pwd:x9cml/YzichV2+XlhiMu8g
-      name: 'icePwd',
-      reg: /^ice-pwd:(\S*)/,
-      format: "ice-pwd:%s"
-    },
-    { //a=fingerprint:SHA-1 00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33
-      name: 'fingerprint',
-      reg: /^fingerprint:(\S*) (\S*)/,
-      names: ['type', 'hash'],
-      format: "fingerprint:%s %s"
-    },
-    {
-      //a=candidate:0 1 UDP 2113667327 203.0.113.1 54400 typ host
-      //a=candidate:1162875081 1 udp 2113937151 192.168.34.75 60017 typ host generation 0
-      //a=candidate:3289912957 2 udp 1845501695 193.84.77.194 60017 typ srflx raddr 192.168.34.75 rport 60017 generation 0
-      //a=candidate:229815620 1 tcp 1518280447 192.168.150.19 60017 typ host tcptype active generation 0
-      //a=candidate:3289912957 2 tcp 1845501695 193.84.77.194 60017 typ srflx raddr 192.168.34.75 rport 60017 tcptype passive generation 0
-      push:'candidates',
-      reg: /^candidate:(\S*) (\d*) (\S*) (\d*) (\S*) (\d*) typ (\S*)(?: raddr (\S*) rport (\d*))?(?: tcptype (\S*))?(?: generation (\d*))?/,
-      names: ['foundation', 'component', 'transport', 'priority', 'ip', 'port', 'type', 'raddr', 'rport', 'tcptype', 'generation'],
-      format: function (o) {
-        var str = "candidate:%s %d %s %d %s %d typ %s";
-
-        str += (o.raddr != null) ? " raddr %s rport %d" : "%v%v";
-
-        // NB: candidate has three optional chunks, so %void middles one if it's missing
-        str += (o.tcptype != null) ? " tcptype %s" : "%v";
-
-        if (o.generation != null) {
-          str += " generation %d";
-        }
-        return str;
-      }
-    },
-    { //a=end-of-candidates (keep after the candidates line for readability)
-      name: 'endOfCandidates',
-      reg: /^(end-of-candidates)/
-    },
-    { //a=remote-candidates:1 203.0.113.1 54400 2 203.0.113.1 54401 ...
-      name: 'remoteCandidates',
-      reg: /^remote-candidates:(.*)/,
-      format: "remote-candidates:%s"
-    },
-    { //a=ice-options:google-ice
-      name: 'iceOptions',
-      reg: /^ice-options:(\S*)/,
-      format: "ice-options:%s"
-    },
-    { //a=ssrc:2566107569 cname:t9YU8M1UxTF8Y1A1
-      push: "ssrcs",
-      reg: /^ssrc:(\d*) ([\w_]*):(.*)/,
-      names: ['id', 'attribute', 'value'],
-      format: "ssrc:%d %s:%s"
-    },
-    { //a=ssrc-group:FEC 1 2
-      push: "ssrcGroups",
-      reg: /^ssrc-group:(\w*) (.*)/,
-      names: ['semantics', 'ssrcs'],
-      format: "ssrc-group:%s %s"
-    },
-    { //a=msid-semantic: WMS Jvlam5X3SX1OP6pn20zWogvaKJz5Hjf9OnlV
-      name: "msidSemantic",
-      reg: /^msid-semantic:\s?(\w*) (\S*)/,
-      names: ['semantic', 'token'],
-      format: "msid-semantic: %s %s" // space after ":" is not accidental
-    },
-    { //a=group:BUNDLE audio video
-      push: 'groups',
-      reg: /^group:(\w*) (.*)/,
-      names: ['type', 'mids'],
-      format: "group:%s %s"
-    },
-    { //a=rtcp-mux
-      name: 'rtcpMux',
-      reg: /^(rtcp-mux)/
-    },
-    { //a=rtcp-rsize
-      name: 'rtcpRsize',
-      reg: /^(rtcp-rsize)/
-    },
-    { //a=sctpmap:5000 webrtc-datachannel 1024
-      name: 'sctpmap',
-      reg: /^sctpmap:([\w_\/]*) (\S*)(?: (\S*))?/,
-      names: ['sctpmapNumber', 'app', 'maxMessageSize'],
-      format: function (o) {
-        return (o.maxMessageSize != null) ?
-          "sctpmap:%s %s %s" :
-          "sctpmap:%s %s";
-      }
-    },
-    { // any a= that we don't understand is kepts verbatim on media.invalid
-      push: 'invalid',
-      names: ["value"]
-    }
-  ]
-};
-
-// set sensible defaults to avoid polluting the grammar with boring details
-Object.keys(grammar).forEach(function (key) {
-  var objs = grammar[key];
-  objs.forEach(function (obj) {
-    if (!obj.reg) {
-      obj.reg = /(.*)/;
-    }
-    if (!obj.format) {
-      obj.format = "%s";
-    }
-  });
-});
-
-},{}],37:[function(require,module,exports){
-var parser = require('./parser');
-var writer = require('./writer');
-
-exports.write = writer;
-exports.parse = parser.parse;
-exports.parseFmtpConfig = parser.parseFmtpConfig;
-exports.parsePayloads = parser.parsePayloads;
-exports.parseRemoteCandidates = parser.parseRemoteCandidates;
-
-},{"./parser":38,"./writer":39}],38:[function(require,module,exports){
-var toIntIfInt = function (v) {
-  return String(Number(v)) === v ? Number(v) : v;
-};
-
-var attachProperties = function (match, location, names, rawName) {
-  if (rawName && !names) {
-    location[rawName] = toIntIfInt(match[1]);
-  }
-  else {
-    for (var i = 0; i < names.length; i += 1) {
-      if (match[i+1] != null) {
-        location[names[i]] = toIntIfInt(match[i+1]);
-      }
-    }
-  }
-};
-
-var parseReg = function (obj, location, content) {
-  var needsBlank = obj.name && obj.names;
-  if (obj.push && !location[obj.push]) {
-    location[obj.push] = [];
-  }
-  else if (needsBlank && !location[obj.name]) {
-    location[obj.name] = {};
-  }
-  var keyLocation = obj.push ?
-    {} :  // blank object that will be pushed
-    needsBlank ? location[obj.name] : location; // otherwise, named location or root
-
-  attachProperties(content.match(obj.reg), keyLocation, obj.names, obj.name);
-
-  if (obj.push) {
-    location[obj.push].push(keyLocation);
-  }
-};
-
-var grammar = require('./grammar');
-var validLine = RegExp.prototype.test.bind(/^([a-z])=(.*)/);
-
-exports.parse = function (sdp) {
-  var session = {}
-    , media = []
-    , location = session; // points at where properties go under (one of the above)
-
-  // parse lines we understand
-  sdp.split(/(\r\n|\r|\n)/).filter(validLine).forEach(function (l) {
-    var type = l[0];
-    var content = l.slice(2);
-    if (type === 'm') {
-      media.push({rtp: [], fmtp: []});
-      location = media[media.length-1]; // point at latest media line
-    }
-
-    for (var j = 0; j < (grammar[type] || []).length; j += 1) {
-      var obj = grammar[type][j];
-      if (obj.reg.test(content)) {
-        return parseReg(obj, location, content);
-      }
-    }
-  });
-
-  session.media = media; // link it up
-  return session;
-};
-
-var fmtpReducer = function (acc, expr) {
-  var s = expr.split(/=(.+)/, 2);
-  if (s.length === 2) {
-    acc[s[0]] = toIntIfInt(s[1]);
-  }
-  return acc;
-};
-
-exports.parseFmtpConfig = function (str) {
-  return str.split(/\;\s?/).reduce(fmtpReducer, {});
-};
-
-exports.parsePayloads = function (str) {
-  return str.split(' ').map(Number);
-};
-
-exports.parseRemoteCandidates = function (str) {
-  var candidates = [];
-  var parts = str.split(' ').map(toIntIfInt);
-  for (var i = 0; i < parts.length; i += 3) {
-    candidates.push({
-      component: parts[i],
-      ip: parts[i + 1],
-      port: parts[i + 2]
-    });
-  }
-  return candidates;
-};
-
-},{"./grammar":36}],39:[function(require,module,exports){
-var grammar = require('./grammar');
-
-// customized util.format - discards excess arguments and can void middle ones
-var formatRegExp = /%[sdv%]/g;
-var format = function (formatStr) {
-  var i = 1;
-  var args = arguments;
-  var len = args.length;
-  return formatStr.replace(formatRegExp, function (x) {
-    if (i >= len) {
-      return x; // missing argument
-    }
-    var arg = args[i];
-    i += 1;
-    switch (x) {
-      case '%%':
-        return '%';
-      case '%s':
-        return String(arg);
-      case '%d':
-        return Number(arg);
-      case '%v':
-        return '';
-    }
-  });
-  // NB: we discard excess arguments - they are typically undefined from makeLine
-};
-
-var makeLine = function (type, obj, location) {
-  var str = obj.format instanceof Function ?
-    (obj.format(obj.push ? location : location[obj.name])) :
-    obj.format;
-
-  var args = [type + '=' + str];
-  if (obj.names) {
-    for (var i = 0; i < obj.names.length; i += 1) {
-      var n = obj.names[i];
-      if (obj.name) {
-        args.push(location[obj.name][n]);
-      }
-      else { // for mLine and push attributes
-        args.push(location[obj.names[i]]);
-      }
-    }
-  }
-  else {
-    args.push(location[obj.name]);
-  }
-  return format.apply(null, args);
-};
-
-// RFC specified order
-// TODO: extend this with all the rest
-var defaultOuterOrder = [
-  'v', 'o', 's', 'i',
-  'u', 'e', 'p', 'c',
-  'b', 't', 'r', 'z', 'a'
-];
-var defaultInnerOrder = ['i', 'c', 'b', 'a'];
-
-
-module.exports = function (session, opts) {
-  opts = opts || {};
-  // ensure certain properties exist
-  if (session.version == null) {
-    session.version = 0; // "v=0" must be there (only defined version atm)
-  }
-  if (session.name == null) {
-    session.name = " "; // "s= " must be there if no meaningful name set
-  }
-  session.media.forEach(function (mLine) {
-    if (mLine.payloads == null) {
-      mLine.payloads = "";
-    }
-  });
-
-  var outerOrder = opts.outerOrder || defaultOuterOrder;
-  var innerOrder = opts.innerOrder || defaultInnerOrder;
-  var sdp = [];
-
-  // loop through outerOrder for matching properties on session
-  outerOrder.forEach(function (type) {
-    grammar[type].forEach(function (obj) {
-      if (obj.name in session && session[obj.name] != null) {
-        sdp.push(makeLine(type, obj, session));
-      }
-      else if (obj.push in session && session[obj.push] != null) {
-        session[obj.push].forEach(function (el) {
-          sdp.push(makeLine(type, obj, el));
-        });
-      }
-    });
-  });
-
-  // then for each media line, follow the innerOrder
-  session.media.forEach(function (mLine) {
-    sdp.push(makeLine('m', grammar.m[0], mLine));
-
-    innerOrder.forEach(function (type) {
-      grammar[type].forEach(function (obj) {
-        if (obj.name in mLine && mLine[obj.name] != null) {
-          sdp.push(makeLine(type, obj, mLine));
-        }
-        else if (obj.push in mLine && mLine[obj.push] != null) {
-          mLine[obj.push].forEach(function (el) {
-            sdp.push(makeLine(type, obj, el));
-          });
-        }
-      });
-    });
-  });
-
-  return sdp.join('\r\n') + '\r\n';
-};
-
-},{"./grammar":36}],40:[function(require,module,exports){
-module.exports={
-  "name": "jssip",
-  "title": "JsSIP",
-  "description": "the Javascript SIP library",
-  "version": "2.0.6",
-  "homepage": "http://jssip.net",
-  "author": "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
-  "contributors": [
-    "Iñaki Baz Castillo <ibc@aliax.net> (https://github.com/ibc)",
-    "Saúl Ibarra Corretgé <saghul@gmail.com> (https://github.com/saghul)"
-  ],
-  "main": "lib/JsSIP.js",
-  "keywords": [
-    "sip",
-    "websocket",
-    "webrtc",
-    "node",
-    "browser",
-    "library"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/versatica/JsSIP.git"
-  },
-  "bugs": {
-    "url": "https://github.com/versatica/JsSIP/issues"
-  },
-  "dependencies": {
-    "debug": "^2.2.0",
-    "rtcninja": "^0.7.0",
-    "sdp-transform": "^1.6.2"
-  },
-  "devDependencies": {
-    "browserify": "^13.1.0",
-    "gulp": "git+https://github.com/gulpjs/gulp.git#4.0",
-    "gulp-expect-file": "0.0.7",
-    "gulp-header": "1.8.8",
-    "gulp-jshint": "^2.0.1",
-    "gulp-nodeunit-runner": "^0.2.2",
-    "gulp-rename": "^1.2.2",
-    "gulp-uglify": "^2.0.0",
-    "gulp-util": "^3.0.7",
-    "jshint": "^2.9.3",
-    "jshint-stylish": "^2.2.1",
-    "pegjs": "0.7.0",
-    "vinyl-buffer": "^1.0.0",
-    "vinyl-source-stream": "^1.1.0"
-  },
-  "scripts": {
-    "test": "gulp test"
-  }
-}
-
-},{}],41:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -23537,7 +23063,6 @@ var browser = require('bowser'),
 
 	// Internal vars
 	getUserMedia = null,
-	mediaDevices = null,
 	RTCPeerConnection = null,
 	RTCSessionDescription = null,
 	RTCIceCandidate = null,
@@ -23549,12 +23074,14 @@ var browser = require('bowser'),
 	browserVersion = Number(browser.version) || 0,
 	isDesktop = !!(!browser.mobile && (!browser.tablet || (browser.msie && browserVersion >= 10))),
 	hasWebRTC = false,
-	// Dirty trick to get this library working in a Node-webkit env with browserified libs
-	virtGlobal = global.window || global,
-	// Don't fail in Node
-	virtNavigator = virtGlobal.navigator || {};
+	virtGlobal, virtNavigator;
 
 debugerror.log = console.warn.bind(console);
+
+// Dirty trick to get this library working in a Node-webkit env with browserified libs
+virtGlobal = global.window || global;
+// Don't fail in Node
+virtNavigator = virtGlobal.navigator || {};
 
 
 // Constructor.
@@ -23572,7 +23099,6 @@ function Adapter(options) {
 	) {
 		hasWebRTC = true;
 		getUserMedia = virtNavigator.webkitGetUserMedia.bind(virtNavigator);
-		mediaDevices = virtNavigator.mediaDevices;
 		RTCPeerConnection = virtGlobal.webkitRTCPeerConnection;
 		RTCSessionDescription = virtGlobal.RTCSessionDescription;
 		RTCIceCandidate = virtGlobal.RTCIceCandidate;
@@ -23588,34 +23114,17 @@ function Adapter(options) {
 		};
 		canRenegotiate = true;
 		oldSpecRTCOfferOptions = false;
-	// Old Firefox desktop, old Firefox Android.
+	// Firefox desktop, Firefox Android.
 	} else if (
-		(browser.firefox && browserVersion < 47) ||
+		(isDesktop && browser.firefox && browserVersion >= 22) ||
+		(browser.android && browser.firefox && browserVersion >= 33) ||
 		(virtNavigator.mozGetUserMedia && virtGlobal.mozRTCPeerConnection)
 	) {
 		hasWebRTC = true;
 		getUserMedia = virtNavigator.mozGetUserMedia.bind(virtNavigator);
-		mediaDevices = virtNavigator.mediaDevices;
 		RTCPeerConnection = virtGlobal.mozRTCPeerConnection;
 		RTCSessionDescription = virtGlobal.mozRTCSessionDescription;
 		RTCIceCandidate = virtGlobal.mozRTCIceCandidate;
-		MediaStreamTrack = virtGlobal.MediaStreamTrack;
-		attachMediaStream = function (element, stream) {
-			element.src = URL.createObjectURL(stream);
-			return element;
-		};
-		canRenegotiate = false;
-		oldSpecRTCOfferOptions = false;
-	// Modern Firefox desktop, modern Firefox Android.
-	} else if (
-		((browser.firefox || browser.gecko) && browserVersion >= 47)
-	) {
-		hasWebRTC = true;
-		getUserMedia = virtNavigator.mozGetUserMedia.bind(virtNavigator);
-		mediaDevices = virtNavigator.mediaDevices;
-		RTCPeerConnection = virtGlobal.RTCPeerConnection;
-		RTCSessionDescription = virtGlobal.RTCSessionDescription;
-		RTCIceCandidate = virtGlobal.RTCIceCandidate;
 		MediaStreamTrack = virtGlobal.MediaStreamTrack;
 		attachMediaStream = function (element, stream) {
 			element.src = URL.createObjectURL(stream);
@@ -23635,7 +23144,6 @@ function Adapter(options) {
 
 		hasWebRTC = true;
 		getUserMedia = pluginiface.getUserMedia;
-		mediaDevices = pluginiface.mediaDevices;
 		RTCPeerConnection = pluginiface.RTCPeerConnection;
 		RTCSessionDescription = pluginiface.RTCSessionDescription;
 		RTCIceCandidate = pluginiface.RTCIceCandidate;
@@ -23652,7 +23160,6 @@ function Adapter(options) {
 	} else if (virtNavigator.getUserMedia && virtGlobal.RTCPeerConnection) {
 		hasWebRTC = true;
 		getUserMedia = virtNavigator.getUserMedia.bind(virtNavigator);
-		mediaDevices = virtNavigator.mediaDevices;
 		RTCPeerConnection = virtGlobal.RTCPeerConnection;
 		RTCSessionDescription = virtGlobal.RTCSessionDescription;
 		RTCIceCandidate = virtGlobal.RTCIceCandidate;
@@ -23725,9 +23232,6 @@ function Adapter(options) {
 			}
 		};
 	}
-
-	// Expose mediaDevices.
-	Adapter.mediaDevices = mediaDevices;
 
 	// Expose RTCPeerConnection.
 	Adapter.RTCPeerConnection = RTCPeerConnection || throwNonSupported('RTCPeerConnection');
@@ -23849,7 +23353,7 @@ function Adapter(options) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"bowser":45,"debug":46}],42:[function(require,module,exports){
+},{"bowser":40,"debug":33}],37:[function(require,module,exports){
 'use strict';
 
 // Expose the RTCPeerConnection class.
@@ -24604,7 +24108,7 @@ function setProperties() {
 	});
 }
 
-},{"./Adapter":41,"debug":46,"merge":49}],43:[function(require,module,exports){
+},{"./Adapter":36,"debug":33,"merge":41}],38:[function(require,module,exports){
 'use strict';
 
 module.exports = rtcninja;
@@ -24642,7 +24146,6 @@ function rtcninja(options) {
 
 	// Expose WebRTC API and utils.
 	rtcninja.getUserMedia = iface.getUserMedia;
-	rtcninja.mediaDevices = iface.mediaDevices;
 	rtcninja.RTCSessionDescription = iface.RTCSessionDescription;
 	rtcninja.RTCIceCandidate = iface.RTCIceCandidate;
 	rtcninja.MediaStreamTrack = iface.MediaStreamTrack;
@@ -24695,14 +24198,14 @@ Object.defineProperty(rtcninja, 'called', {
 rtcninja.debug = require('debug');
 rtcninja.browser = browser;
 
-},{"./Adapter":41,"./RTCPeerConnection":42,"./version":44,"bowser":45,"debug":46}],44:[function(require,module,exports){
+},{"./Adapter":36,"./RTCPeerConnection":37,"./version":39,"bowser":40,"debug":33}],39:[function(require,module,exports){
 'use strict';
 
 // Expose the 'version' field of package.json.
 module.exports = require('../package.json').version;
 
 
-},{"../package.json":50}],45:[function(require,module,exports){
+},{"../package.json":42}],40:[function(require,module,exports){
 /*!
  * Bowser - a browser detector
  * https://github.com/ded/bowser
@@ -25280,13 +24783,7 @@ module.exports = require('../package.json').version;
   return bowser
 });
 
-},{}],46:[function(require,module,exports){
-arguments[4][33][0].apply(exports,arguments)
-},{"./debug":47,"dup":33}],47:[function(require,module,exports){
-arguments[4][34][0].apply(exports,arguments)
-},{"dup":34,"ms":48}],48:[function(require,module,exports){
-arguments[4][35][0].apply(exports,arguments)
-},{"dup":35}],49:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /*!
  * @name JavaScript/NodeJS Merge v1.2.0
  * @author yeikos
@@ -25462,47 +24959,630 @@ arguments[4][35][0].apply(exports,arguments)
 	}
 
 })(typeof module === 'object' && module && typeof module.exports === 'object' && module.exports);
-},{}],50:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 module.exports={
   "name": "rtcninja",
-  "version": "0.7.0",
+  "version": "0.6.8",
   "description": "WebRTC API wrapper to deal with different browsers",
-  "author": "Iñaki Baz Castillo <inaki.baz@eface2face.com> (http://eface2face.com)",
+  "author": {
+    "name": "Iñaki Baz Castillo",
+    "email": "inaki.baz@eface2face.com",
+    "url": "http://eface2face.com"
+  },
   "contributors": [
-    "Jesús Pérez <jesus.perez@eface2face.com>"
+    {
+      "name": "Jesús Pérez",
+      "email": "jesus.perez@eface2face.com"
+    }
   ],
   "license": "MIT",
   "main": "lib/rtcninja.js",
   "homepage": "https://github.com/eface2face/rtcninja.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/eface2face/rtcninja.js.git"
+    "url": "git+https://github.com/eface2face/rtcninja.js.git"
   },
   "keywords": [
     "webrtc"
   ],
   "engines": {
-    "node": ">=0.12.0"
+    "node": ">=0.10.32"
   },
   "dependencies": {
-    "bowser": "^1.4.6",
+    "bowser": "^1.4.1",
     "debug": "^2.2.0",
     "merge": "^1.2.0"
   },
   "devDependencies": {
-    "browserify": "^13.1.0",
+    "browserify": "^13.0.1",
     "gulp": "git+https://github.com/gulpjs/gulp.git#4.0",
     "gulp-expect-file": "0.0.7",
     "gulp-filelog": "^0.4.1",
-    "gulp-header": "^1.8.8",
+    "gulp-header": "^1.8.7",
     "gulp-jscs": "^3.0.2",
     "gulp-jscs-stylish": "^1.4.0",
     "gulp-jshint": "^2.0.1",
     "gulp-rename": "^1.2.2",
     "gulp-uglify": "^1.5.4",
+    "jshint": "^2.9.2",
+    "jshint-stylish": "^2.2.0",
+    "vinyl-source-stream": "^1.1.0"
+  },
+  "gitHead": "dc4fff27105a83126193e29c1c63d9cf0c54f099",
+  "bugs": {
+    "url": "https://github.com/eface2face/rtcninja.js/issues"
+  },
+  "_id": "rtcninja@0.6.8",
+  "scripts": {},
+  "_shasum": "2cb27f2b7b9a74450329d9b240959e4d5b308bbb",
+  "_from": "rtcninja@>=0.6.7 <0.7.0",
+  "_npmVersion": "2.14.20",
+  "_nodeVersion": "4.4.1",
+  "_npmUser": {
+    "name": "ibc",
+    "email": "ibc@aliax.net"
+  },
+  "dist": {
+    "shasum": "2cb27f2b7b9a74450329d9b240959e4d5b308bbb",
+    "tarball": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.6.8.tgz"
+  },
+  "maintainers": [
+    {
+      "name": "ibc",
+      "email": "ibc@aliax.net"
+    }
+  ],
+  "_npmOperationalInternal": {
+    "host": "packages-16-east.internal.npmjs.com",
+    "tmp": "tmp/rtcninja-0.6.8.tgz_1468236144989_0.6427697774488479"
+  },
+  "directories": {},
+  "_resolved": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.6.8.tgz",
+  "readme": "ERROR: No README data found!"
+}
+
+},{}],43:[function(require,module,exports){
+var grammar = module.exports = {
+  v: [{
+      name: 'version',
+      reg: /^(\d*)$/
+  }],
+  o: [{ //o=- 20518 0 IN IP4 203.0.113.1
+    // NB: sessionId will be a String in most cases because it is huge
+    name: 'origin',
+    reg: /^(\S*) (\d*) (\d*) (\S*) IP(\d) (\S*)/,
+    names: ['username', 'sessionId', 'sessionVersion', 'netType', 'ipVer', 'address'],
+    format: "%s %s %d %s IP%d %s"
+  }],
+  // default parsing of these only (though some of these feel outdated)
+  s: [{ name: 'name' }],
+  i: [{ name: 'description' }],
+  u: [{ name: 'uri' }],
+  e: [{ name: 'email' }],
+  p: [{ name: 'phone' }],
+  z: [{ name: 'timezones' }], // TODO: this one can actually be parsed properly..
+  r: [{ name: 'repeats' }],   // TODO: this one can also be parsed properly
+  //k: [{}], // outdated thing ignored
+  t: [{ //t=0 0
+    name: 'timing',
+    reg: /^(\d*) (\d*)/,
+    names: ['start', 'stop'],
+    format: "%d %d"
+  }],
+  c: [{ //c=IN IP4 10.47.197.26
+      name: 'connection',
+      reg: /^IN IP(\d) (\S*)/,
+      names: ['version', 'ip'],
+      format: "IN IP%d %s"
+  }],
+  b: [{ //b=AS:4000
+      push: 'bandwidth',
+      reg: /^(TIAS|AS|CT|RR|RS):(\d*)/,
+      names: ['type', 'limit'],
+      format: "%s:%s"
+  }],
+  m: [{ //m=video 51744 RTP/AVP 126 97 98 34 31
+      // NB: special - pushes to session
+      // TODO: rtp/fmtp should be filtered by the payloads found here?
+      reg: /^(\w*) (\d*) ([\w\/]*)(?: (.*))?/,
+      names: ['type', 'port', 'protocol', 'payloads'],
+      format: "%s %d %s %s"
+  }],
+  a: [
+    { //a=rtpmap:110 opus/48000/2
+      push: 'rtp',
+      reg: /^rtpmap:(\d*) ([\w\-\.]*)(?:\s*\/(\d*)(?:\s*\/(\S*))?)?/,
+      names: ['payload', 'codec', 'rate', 'encoding'],
+      format: function (o) {
+        return (o.encoding) ?
+          "rtpmap:%d %s/%s/%s":
+          o.rate ?
+          "rtpmap:%d %s/%s":
+          "rtpmap:%d %s";
+      }
+    },
+    {
+      //a=fmtp:108 profile-level-id=24;object=23;bitrate=64000
+      //a=fmtp:111 minptime=10; useinbandfec=1
+      push: 'fmtp',
+      reg: /^fmtp:(\d*) ([\S| ]*)/,
+      names: ['payload', 'config'],
+      format: "fmtp:%d %s"
+    },
+    { //a=control:streamid=0
+        name: 'control',
+        reg: /^control:(.*)/,
+        format: "control:%s"
+    },
+    { //a=rtcp:65179 IN IP4 193.84.77.194
+      name: 'rtcp',
+      reg: /^rtcp:(\d*)(?: (\S*) IP(\d) (\S*))?/,
+      names: ['port', 'netType', 'ipVer', 'address'],
+      format: function (o) {
+        return (o.address != null) ?
+          "rtcp:%d %s IP%d %s":
+          "rtcp:%d";
+      }
+    },
+    { //a=rtcp-fb:98 trr-int 100
+      push: 'rtcpFbTrrInt',
+      reg: /^rtcp-fb:(\*|\d*) trr-int (\d*)/,
+      names: ['payload', 'value'],
+      format: "rtcp-fb:%d trr-int %d"
+    },
+    { //a=rtcp-fb:98 nack rpsi
+      push: 'rtcpFb',
+      reg: /^rtcp-fb:(\*|\d*) ([\w-_]*)(?: ([\w-_]*))?/,
+      names: ['payload', 'type', 'subtype'],
+      format: function (o) {
+        return (o.subtype != null) ?
+          "rtcp-fb:%s %s %s":
+          "rtcp-fb:%s %s";
+      }
+    },
+    { //a=extmap:2 urn:ietf:params:rtp-hdrext:toffset
+      //a=extmap:1/recvonly URI-gps-string
+      push: 'ext',
+      reg: /^extmap:([\w_\/]*) (\S*)(?: (\S*))?/,
+      names: ['value', 'uri', 'config'], // value may include "/direction" suffix
+      format: function (o) {
+        return (o.config != null) ?
+          "extmap:%s %s %s":
+          "extmap:%s %s";
+      }
+    },
+    {
+      //a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:PS1uQCVeeCFCanVmcjkpPywjNWhcYD0mXXtxaVBR|2^20|1:32
+      push: 'crypto',
+      reg: /^crypto:(\d*) ([\w_]*) (\S*)(?: (\S*))?/,
+      names: ['id', 'suite', 'config', 'sessionConfig'],
+      format: function (o) {
+        return (o.sessionConfig != null) ?
+          "crypto:%d %s %s %s":
+          "crypto:%d %s %s";
+      }
+    },
+    { //a=setup:actpass
+      name: 'setup',
+      reg: /^setup:(\w*)/,
+      format: "setup:%s"
+    },
+    { //a=mid:1
+      name: 'mid',
+      reg: /^mid:([^\s]*)/,
+      format: "mid:%s"
+    },
+    { //a=msid:0c8b064d-d807-43b4-b434-f92a889d8587 98178685-d409-46e0-8e16-7ef0db0db64a
+      name: 'msid',
+      reg: /^msid:(.*)/,
+      format: "msid:%s"
+    },
+    { //a=ptime:20
+      name: 'ptime',
+      reg: /^ptime:(\d*)/,
+      format: "ptime:%d"
+    },
+    { //a=maxptime:60
+      name: 'maxptime',
+      reg: /^maxptime:(\d*)/,
+      format: "maxptime:%d"
+    },
+    { //a=sendrecv
+      name: 'direction',
+      reg: /^(sendrecv|recvonly|sendonly|inactive)/
+    },
+    { //a=ice-lite
+      name: 'icelite',
+      reg: /^(ice-lite)/
+    },
+    { //a=ice-ufrag:F7gI
+      name: 'iceUfrag',
+      reg: /^ice-ufrag:(\S*)/,
+      format: "ice-ufrag:%s"
+    },
+    { //a=ice-pwd:x9cml/YzichV2+XlhiMu8g
+      name: 'icePwd',
+      reg: /^ice-pwd:(\S*)/,
+      format: "ice-pwd:%s"
+    },
+    { //a=fingerprint:SHA-1 00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33
+      name: 'fingerprint',
+      reg: /^fingerprint:(\S*) (\S*)/,
+      names: ['type', 'hash'],
+      format: "fingerprint:%s %s"
+    },
+    {
+      //a=candidate:0 1 UDP 2113667327 203.0.113.1 54400 typ host
+      //a=candidate:1162875081 1 udp 2113937151 192.168.34.75 60017 typ host generation 0
+      //a=candidate:3289912957 2 udp 1845501695 193.84.77.194 60017 typ srflx raddr 192.168.34.75 rport 60017 generation 0
+      //a=candidate:229815620 1 tcp 1518280447 192.168.150.19 60017 typ host tcptype active generation 0
+      //a=candidate:3289912957 2 tcp 1845501695 193.84.77.194 60017 typ srflx raddr 192.168.34.75 rport 60017 tcptype passive generation 0
+      push:'candidates',
+      reg: /^candidate:(\S*) (\d*) (\S*) (\d*) (\S*) (\d*) typ (\S*)(?: raddr (\S*) rport (\d*))?(?: tcptype (\S*))?(?: generation (\d*))?/,
+      names: ['foundation', 'component', 'transport', 'priority', 'ip', 'port', 'type', 'raddr', 'rport', 'tcptype', 'generation'],
+      format: function (o) {
+        var str = "candidate:%s %d %s %d %s %d typ %s";
+
+        str += (o.raddr != null) ? " raddr %s rport %d" : "%v%v";
+
+        // NB: candidate has three optional chunks, so %void middles one if it's missing
+        str += (o.tcptype != null) ? " tcptype %s" : "%v";
+
+        if (o.generation != null) {
+          str += " generation %d";
+        }
+        return str;
+      }
+    },
+    { //a=end-of-candidates (keep after the candidates line for readability)
+      name: 'endOfCandidates',
+      reg: /^(end-of-candidates)/
+    },
+    { //a=remote-candidates:1 203.0.113.1 54400 2 203.0.113.1 54401 ...
+      name: 'remoteCandidates',
+      reg: /^remote-candidates:(.*)/,
+      format: "remote-candidates:%s"
+    },
+    { //a=ice-options:google-ice
+      name: 'iceOptions',
+      reg: /^ice-options:(\S*)/,
+      format: "ice-options:%s"
+    },
+    { //a=ssrc:2566107569 cname:t9YU8M1UxTF8Y1A1
+      push: "ssrcs",
+      reg: /^ssrc:(\d*) ([\w_]*):(.*)/,
+      names: ['id', 'attribute', 'value'],
+      format: "ssrc:%d %s:%s"
+    },
+    { //a=ssrc-group:FEC 1 2
+      push: "ssrcGroups",
+      reg: /^ssrc-group:(\w*) (.*)/,
+      names: ['semantics', 'ssrcs'],
+      format: "ssrc-group:%s %s"
+    },
+    { //a=msid-semantic: WMS Jvlam5X3SX1OP6pn20zWogvaKJz5Hjf9OnlV
+      name: "msidSemantic",
+      reg: /^msid-semantic:\s?(\w*) (\S*)/,
+      names: ['semantic', 'token'],
+      format: "msid-semantic: %s %s" // space after ":" is not accidental
+    },
+    { //a=group:BUNDLE audio video
+      push: 'groups',
+      reg: /^group:(\w*) (.*)/,
+      names: ['type', 'mids'],
+      format: "group:%s %s"
+    },
+    { //a=rtcp-mux
+      name: 'rtcpMux',
+      reg: /^(rtcp-mux)/
+    },
+    { //a=rtcp-rsize
+      name: 'rtcpRsize',
+      reg: /^(rtcp-rsize)/
+    },
+    { //a=sctpmap:5000 webrtc-datachannel 1024
+      name: 'sctpmap',
+      reg: /^sctpmap:([\w_\/]*) (\S*)(?: (\S*))?/,
+      names: ['sctpmapNumber', 'app', 'maxMessageSize'],
+      format: function (o) {
+        return (o.maxMessageSize != null) ?
+          "sctpmap:%s %s %s" :
+          "sctpmap:%s %s";
+      }
+    },
+    { // any a= that we don't understand is kepts verbatim on media.invalid
+      push: 'invalid',
+      names: ["value"]
+    }
+  ]
+};
+
+// set sensible defaults to avoid polluting the grammar with boring details
+Object.keys(grammar).forEach(function (key) {
+  var objs = grammar[key];
+  objs.forEach(function (obj) {
+    if (!obj.reg) {
+      obj.reg = /(.*)/;
+    }
+    if (!obj.format) {
+      obj.format = "%s";
+    }
+  });
+});
+
+},{}],44:[function(require,module,exports){
+var parser = require('./parser');
+var writer = require('./writer');
+
+exports.write = writer;
+exports.parse = parser.parse;
+exports.parseFmtpConfig = parser.parseFmtpConfig;
+exports.parsePayloads = parser.parsePayloads;
+exports.parseRemoteCandidates = parser.parseRemoteCandidates;
+
+},{"./parser":45,"./writer":46}],45:[function(require,module,exports){
+var toIntIfInt = function (v) {
+  return String(Number(v)) === v ? Number(v) : v;
+};
+
+var attachProperties = function (match, location, names, rawName) {
+  if (rawName && !names) {
+    location[rawName] = toIntIfInt(match[1]);
+  }
+  else {
+    for (var i = 0; i < names.length; i += 1) {
+      if (match[i+1] != null) {
+        location[names[i]] = toIntIfInt(match[i+1]);
+      }
+    }
+  }
+};
+
+var parseReg = function (obj, location, content) {
+  var needsBlank = obj.name && obj.names;
+  if (obj.push && !location[obj.push]) {
+    location[obj.push] = [];
+  }
+  else if (needsBlank && !location[obj.name]) {
+    location[obj.name] = {};
+  }
+  var keyLocation = obj.push ?
+    {} :  // blank object that will be pushed
+    needsBlank ? location[obj.name] : location; // otherwise, named location or root
+
+  attachProperties(content.match(obj.reg), keyLocation, obj.names, obj.name);
+
+  if (obj.push) {
+    location[obj.push].push(keyLocation);
+  }
+};
+
+var grammar = require('./grammar');
+var validLine = RegExp.prototype.test.bind(/^([a-z])=(.*)/);
+
+exports.parse = function (sdp) {
+  var session = {}
+    , media = []
+    , location = session; // points at where properties go under (one of the above)
+
+  // parse lines we understand
+  sdp.split(/(\r\n|\r|\n)/).filter(validLine).forEach(function (l) {
+    var type = l[0];
+    var content = l.slice(2);
+    if (type === 'm') {
+      media.push({rtp: [], fmtp: []});
+      location = media[media.length-1]; // point at latest media line
+    }
+
+    for (var j = 0; j < (grammar[type] || []).length; j += 1) {
+      var obj = grammar[type][j];
+      if (obj.reg.test(content)) {
+        return parseReg(obj, location, content);
+      }
+    }
+  });
+
+  session.media = media; // link it up
+  return session;
+};
+
+var fmtpReducer = function (acc, expr) {
+  var s = expr.split(/=(.+)/, 2);
+  if (s.length === 2) {
+    acc[s[0]] = toIntIfInt(s[1]);
+  }
+  return acc;
+};
+
+exports.parseFmtpConfig = function (str) {
+  return str.split(/\;\s?/).reduce(fmtpReducer, {});
+};
+
+exports.parsePayloads = function (str) {
+  return str.split(' ').map(Number);
+};
+
+exports.parseRemoteCandidates = function (str) {
+  var candidates = [];
+  var parts = str.split(' ').map(toIntIfInt);
+  for (var i = 0; i < parts.length; i += 3) {
+    candidates.push({
+      component: parts[i],
+      ip: parts[i + 1],
+      port: parts[i + 2]
+    });
+  }
+  return candidates;
+};
+
+},{"./grammar":43}],46:[function(require,module,exports){
+var grammar = require('./grammar');
+
+// customized util.format - discards excess arguments and can void middle ones
+var formatRegExp = /%[sdv%]/g;
+var format = function (formatStr) {
+  var i = 1;
+  var args = arguments;
+  var len = args.length;
+  return formatStr.replace(formatRegExp, function (x) {
+    if (i >= len) {
+      return x; // missing argument
+    }
+    var arg = args[i];
+    i += 1;
+    switch (x) {
+      case '%%':
+        return '%';
+      case '%s':
+        return String(arg);
+      case '%d':
+        return Number(arg);
+      case '%v':
+        return '';
+    }
+  });
+  // NB: we discard excess arguments - they are typically undefined from makeLine
+};
+
+var makeLine = function (type, obj, location) {
+  var str = obj.format instanceof Function ?
+    (obj.format(obj.push ? location : location[obj.name])) :
+    obj.format;
+
+  var args = [type + '=' + str];
+  if (obj.names) {
+    for (var i = 0; i < obj.names.length; i += 1) {
+      var n = obj.names[i];
+      if (obj.name) {
+        args.push(location[obj.name][n]);
+      }
+      else { // for mLine and push attributes
+        args.push(location[obj.names[i]]);
+      }
+    }
+  }
+  else {
+    args.push(location[obj.name]);
+  }
+  return format.apply(null, args);
+};
+
+// RFC specified order
+// TODO: extend this with all the rest
+var defaultOuterOrder = [
+  'v', 'o', 's', 'i',
+  'u', 'e', 'p', 'c',
+  'b', 't', 'r', 'z', 'a'
+];
+var defaultInnerOrder = ['i', 'c', 'b', 'a'];
+
+
+module.exports = function (session, opts) {
+  opts = opts || {};
+  // ensure certain properties exist
+  if (session.version == null) {
+    session.version = 0; // "v=0" must be there (only defined version atm)
+  }
+  if (session.name == null) {
+    session.name = " "; // "s= " must be there if no meaningful name set
+  }
+  session.media.forEach(function (mLine) {
+    if (mLine.payloads == null) {
+      mLine.payloads = "";
+    }
+  });
+
+  var outerOrder = opts.outerOrder || defaultOuterOrder;
+  var innerOrder = opts.innerOrder || defaultInnerOrder;
+  var sdp = [];
+
+  // loop through outerOrder for matching properties on session
+  outerOrder.forEach(function (type) {
+    grammar[type].forEach(function (obj) {
+      if (obj.name in session && session[obj.name] != null) {
+        sdp.push(makeLine(type, obj, session));
+      }
+      else if (obj.push in session && session[obj.push] != null) {
+        session[obj.push].forEach(function (el) {
+          sdp.push(makeLine(type, obj, el));
+        });
+      }
+    });
+  });
+
+  // then for each media line, follow the innerOrder
+  session.media.forEach(function (mLine) {
+    sdp.push(makeLine('m', grammar.m[0], mLine));
+
+    innerOrder.forEach(function (type) {
+      grammar[type].forEach(function (obj) {
+        if (obj.name in mLine && mLine[obj.name] != null) {
+          sdp.push(makeLine(type, obj, mLine));
+        }
+        else if (obj.push in mLine && mLine[obj.push] != null) {
+          mLine[obj.push].forEach(function (el) {
+            sdp.push(makeLine(type, obj, el));
+          });
+        }
+      });
+    });
+  });
+
+  return sdp.join('\r\n') + '\r\n';
+};
+
+},{"./grammar":43}],47:[function(require,module,exports){
+module.exports={
+  "name": "jssip",
+  "title": "JsSIP",
+  "description": "the Javascript SIP library",
+  "version": "2.0.6",
+  "homepage": "http://jssip.net",
+  "author": "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
+  "contributors": [
+    "Iñaki Baz Castillo <ibc@aliax.net> (https://github.com/ibc)",
+    "Saúl Ibarra Corretgé <saghul@gmail.com> (https://github.com/saghul)"
+  ],
+  "main": "lib/JsSIP.js",
+  "keywords": [
+    "sip",
+    "websocket",
+    "webrtc",
+    "node",
+    "browser",
+    "library"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/versatica/JsSIP.git"
+  },
+  "bugs": {
+    "url": "https://github.com/versatica/JsSIP/issues"
+  },
+  "dependencies": {
+    "debug": "^2.2.0",
+    "rtcninja": "^0.7.0",
+    "sdp-transform": "^1.6.2"
+  },
+  "devDependencies": {
+    "browserify": "^13.1.0",
+    "gulp": "git+https://github.com/gulpjs/gulp.git#4.0",
+    "gulp-expect-file": "0.0.7",
+    "gulp-header": "1.8.8",
+    "gulp-jshint": "^2.0.1",
+    "gulp-nodeunit-runner": "^0.2.2",
+    "gulp-rename": "^1.2.2",
+    "gulp-uglify": "^2.0.0",
+    "gulp-util": "^3.0.7",
     "jshint": "^2.9.3",
     "jshint-stylish": "^2.2.1",
+    "pegjs": "0.7.0",
+    "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0"
+  },
+  "scripts": {
+    "test": "gulp test"
   }
 }
 
