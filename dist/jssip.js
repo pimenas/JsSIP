@@ -15157,7 +15157,7 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
 
           if (self.is_confirmed) {
               debug('sending candidate: %s',  JSON.stringify(candidate));
-              sendCandidates.call(self, [candidate]);
+              sendCandidate.call(self, candidate);
           } else {
               debug('pushing to candidates: %s', JSON.stringify(candidate));
               self.candidates.push(candidate);
@@ -16415,7 +16415,7 @@ function confirmed(originator, ack) {
   this.is_confirmed = true;
 
   if (this.ua.configuration.use_info_for_ice) {
-      sendCandidates.call(this);
+      sendCandidate.call(this, this.candidates.pop());
   }
 
   this.emit('confirmed', {
@@ -16490,19 +16490,6 @@ function onunmute(options) {
   });
 }
 
-function sendCandidates(candidate) {
-    debug('sendCandidates(%s)', JSON.stringify(candidate));
-
-    var i;
-    for (i = 0; i < this.candidates.length; i++) {
-        sendCandidate.call(this, this.candidates[i]);
-    }
-
-    this.candidates = [];
-
-    sendCandidate.call(this, candidate);
-}
-
 function sendCandidate(candidate) {
     debug('sendCandidate(%s)', JSON.stringify(candidate));
 
@@ -16512,10 +16499,30 @@ function sendCandidate(candidate) {
         'Info-Package: ice-candidates'
     ];
 
+    var self = this;
+
+    // if still null do nothing.
+    if (candidate === null) {
+        return;
+    }
+
+    var eventHandlers = {
+        onSuccessResponse: function (response) {
+            debug('response: %s', JSON.stringify(response));
+
+            var nextCandidate = self.candidates.pop();
+
+            if (nextCandidate) {
+                sendCandidate.call(self, nextCandidate);
+            }
+        }
+    };
+
     debug('status in sendCandidate: %d', this.status);
     sendRequest.call(this, JsSIP_C.INFO, {
         extraHeaders: extraHeaders,
-        body: JSON.stringify(candidate)
+        body: JSON.stringify(candidate),
+        eventHandlers: eventHandlers
     });
 }
 
