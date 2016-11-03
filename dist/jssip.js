@@ -16531,7 +16531,7 @@ function sendCandidate(candidate) {
     var self = this;
 
     // if still null do nothing.
-    if (candidate === null) {
+    if (! candidate) {
         return;
     }
 
