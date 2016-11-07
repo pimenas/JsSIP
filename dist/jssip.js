@@ -16532,7 +16532,7 @@ function sendCandidate(candidate) {
         return;
     }
 
-    var nextCandidate = self.candidates.pop();
+    var nextCandidate = self.candidates.shift();
 
     if (!candidate && !nextCandidate) {
         return;
@@ -16540,7 +16540,7 @@ function sendCandidate(candidate) {
 
     if (!candidate) {
         candidate = nextCandidate;
-        nextCandidate = self.candidates.pop();
+        nextCandidate = self.candidates.shift();
     }
 
     var eventHandlers = {
