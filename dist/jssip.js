@@ -13723,6 +13723,7 @@ function RTCSession(ua) {
 
   // Stores candidates to send them when session is established using sip info
   this.candidates = [];
+  this.waiting_for_candidate_response = false;
 
   events.EventEmitter.call(this);
 }
@@ -15155,16 +15156,8 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
   // createAnswer or createOffer succeeded
   function createSucceeded(desc) {
     connection.onicecandidate = function(event, candidate) {
-      if (candidate && self.ua.configuration.use_info_for_ice) {
-
-          if (self.is_confirmed) {
-              debug('sending candidate: %s',  JSON.stringify(candidate));
-              sendCandidate.call(self, candidate);
-          } else {
-              debug('pushing to candidates: %s', JSON.stringify(candidate));
-              self.candidates.push(candidate);
-          }
-
+      if (self.ua.configuration.use_info_for_ice) {
+          sendCandidate.call(self, candidate);
           return;
       }
 
@@ -16444,7 +16437,7 @@ function confirmed(originator, ack) {
   this.is_confirmed = true;
 
   if (this.ua.configuration.use_info_for_ice) {
-      sendCandidate.call(this, this.candidates.pop());
+      sendCandidate.call(this);
   }
 
   this.emit('confirmed', {
@@ -16530,16 +16523,30 @@ function sendCandidate(candidate) {
 
     var self = this;
 
-    // if still null do nothing.
-    if (! candidate) {
+    if (!this.is_confirmed || this.waiting_candidate_response) {
+        if (!candidate) {
+            return;
+        }
+        debug('will send candidate later: ' + JSON.stringify(candidate));
+        this.candidates.push(candidate);
         return;
+    }
+
+    var nextCandidate = self.candidates.pop();
+
+    if (!candidate && !nextCandidate) {
+        return;
+    }
+
+    if (!candidate) {
+        candidate = nextCandidate;
+        nextCandidate = self.candidates.pop();
     }
 
     var eventHandlers = {
         onSuccessResponse: function (response) {
             debug('response: %s', JSON.stringify(response));
-
-            var nextCandidate = self.candidates.pop();
+            self.waiting_candidate_response = false;
 
             if (nextCandidate) {
                 sendCandidate.call(self, nextCandidate);
@@ -16547,7 +16554,8 @@ function sendCandidate(candidate) {
         }
     };
 
-    debug('status in sendCandidate: %d', this.status);
+    this.waiting_candidate_response = true;
+
     sendRequest.call(this, JsSIP_C.INFO, {
         extraHeaders: extraHeaders,
         body: JSON.stringify(candidate),
