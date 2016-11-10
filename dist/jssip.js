@@ -13417,13 +13417,13 @@ function parseHeader(message, data, headerStart, headerEnd) {
 
       if (parsed === -1) {
         parsed = undefined;
-      }
-
-      length = parsed.length;
-      for (idx = 0; idx < length; idx++) {
-        header = parsed[idx];
-        message.addHeader('record-route', headerValue.substring(header.possition, header.offset));
-        message.headers['Record-Route'][message.getHeaders('record-route').length - 1].parsed = header.parsed;
+      } else {
+        length = parsed.length;
+        for (idx = 0; idx < length; idx++) {
+          header = parsed[idx];
+          message.addHeader('record-route', headerValue.substring(header.possition, header.offset));
+          message.headers['Record-Route'][message.getHeaders('record-route').length - 1].parsed = header.parsed;
+        }
       }
       break;
     case 'call-id':
@@ -13440,13 +13440,13 @@ function parseHeader(message, data, headerStart, headerEnd) {
 
       if (parsed === -1) {
         parsed = undefined;
-      }
-
-      length = parsed.length;
-      for (idx = 0; idx < length; idx++) {
-        header = parsed[idx];
-        message.addHeader('contact', headerValue.substring(header.possition, header.offset));
-        message.headers.Contact[message.getHeaders('contact').length - 1].parsed = header.parsed;
+      } else {
+        length = parsed.length;
+        for (idx = 0; idx < length; idx++) {
+          header = parsed[idx];
+          message.addHeader('contact', headerValue.substring(header.possition, header.offset));
+          message.headers.Contact[message.getHeaders('contact').length - 1].parsed = header.parsed;
+        }
       }
       break;
     case 'content-length':
