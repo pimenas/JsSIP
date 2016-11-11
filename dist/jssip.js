@@ -13656,6 +13656,7 @@ var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
  */
 var holdMediaTypes = ['audio', 'video'];
 
+var empty_sdp = 'v=0\r\no=- 852241206970952499 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=msid-semantic: WMS\r\n';
 
 function RTCSession(ua) {
   debug('new');
@@ -13829,6 +13830,8 @@ RTCSession.prototype.connect = function(target, options, initCallback) {
     pcConfig = options.pcConfig || {iceServers:[]},
     rtcConstraints = options.rtcConstraints || null,
     rtcOfferConstraints = options.rtcOfferConstraints || null;
+
+  this.send_empty_sdp = options.send_empty_sdp || false;
 
   this.rtcOfferConstraints = rtcOfferConstraints;
   this.rtcAnswerConstraints = options.rtcAnswerConstraints || null;
@@ -15723,7 +15726,12 @@ function sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream) 
     });
 
     connecting.call(self, self.request);
-    createLocalDescription.call(self, 'offer', rtcSucceeded, rtcFailed, rtcOfferConstraints);
+
+    if (self.send_empty_sdp) {
+      rtcSucceeded(empty_sdp);
+    } else {
+      createLocalDescription.call(self, 'offer', rtcSucceeded, rtcFailed, rtcOfferConstraints);
+    }
   }
 
   // User media failed
@@ -15879,6 +15887,16 @@ function receiveInviteResponse(response) {
 
       e = {originator:'remote', type:'answer', sdp:response.body};
       this.emit('sdp', e);
+
+      if(this.send_empty_sdp) {
+        // Handle Session Timers.
+        handleSessionTimersInIncomingResponse.call(self, response);
+
+        accepted.call(self, 'remote', response);
+        sendRequest.call(self, JsSIP_C.ACK);
+        confirmed.call(self, 'local', null);
+        break;
+      }
 
       this.connection.setRemoteDescription(
         new rtcninja.RTCSessionDescription({type:'answer', sdp:e.sdp}),
