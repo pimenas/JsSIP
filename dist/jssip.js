@@ -13654,6 +13654,7 @@ var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
  */
 var holdMediaTypes = ['audio', 'video'];
 
+var empty_sdp = 'v=0\r\no=- 852241206970952499 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=msid-semantic: WMS\r\n';
 
 function RTCSession(ua) {
   debug('new');
@@ -13823,6 +13824,8 @@ RTCSession.prototype.connect = function(target, options, initCallback) {
     pcConfig = options.pcConfig || {iceServers:[]},
     rtcConstraints = options.rtcConstraints || null,
     rtcOfferConstraints = options.rtcOfferConstraints || null;
+
+  this.send_empty_sdp = options.send_empty_sdp || false;
 
   this.rtcOfferConstraints = rtcOfferConstraints;
   this.rtcAnswerConstraints = options.rtcAnswerConstraints || null;
@@ -15687,7 +15690,12 @@ function sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream) 
     });
 
     connecting.call(self, self.request);
-    createLocalDescription.call(self, 'offer', rtcSucceeded, rtcFailed, rtcOfferConstraints);
+
+    if (self.send_empty_sdp) {
+      rtcSucceeded(empty_sdp);
+    } else {
+      createLocalDescription.call(self, 'offer', rtcSucceeded, rtcFailed, rtcOfferConstraints);
+    }
   }
 
   // User media failed
@@ -15843,6 +15851,16 @@ function receiveInviteResponse(response) {
 
       e = {originator:'remote', type:'answer', sdp:response.body};
       this.emit('sdp', e);
+
+      if(this.send_empty_sdp) {
+        // Handle Session Timers.
+        handleSessionTimersInIncomingResponse.call(self, response);
+
+        accepted.call(self, 'remote', response);
+        sendRequest.call(self, JsSIP_C.ACK);
+        confirmed.call(self, 'local', null);
+        break;
+      }
 
       this.connection.setRemoteDescription(
         new rtcninja.RTCSessionDescription({type:'answer', sdp:e.sdp}),
@@ -22992,7 +23010,6 @@ var browser = require('bowser'),
 
 	// Internal vars
 	getUserMedia = null,
-	mediaDevices = null,
 	RTCPeerConnection = null,
 	RTCSessionDescription = null,
 	RTCIceCandidate = null,
@@ -23004,12 +23021,14 @@ var browser = require('bowser'),
 	browserVersion = Number(browser.version) || 0,
 	isDesktop = !!(!browser.mobile && (!browser.tablet || (browser.msie && browserVersion >= 10))),
 	hasWebRTC = false,
-	// Dirty trick to get this library working in a Node-webkit env with browserified libs
-	virtGlobal = global.window || global,
-	// Don't fail in Node
-	virtNavigator = virtGlobal.navigator || {};
+	virtGlobal, virtNavigator;
 
 debugerror.log = console.warn.bind(console);
+
+// Dirty trick to get this library working in a Node-webkit env with browserified libs
+virtGlobal = global.window || global;
+// Don't fail in Node
+virtNavigator = virtGlobal.navigator || {};
 
 
 // Constructor.
@@ -23027,7 +23046,6 @@ function Adapter(options) {
 	) {
 		hasWebRTC = true;
 		getUserMedia = virtNavigator.webkitGetUserMedia.bind(virtNavigator);
-		mediaDevices = virtNavigator.mediaDevices;
 		RTCPeerConnection = virtGlobal.webkitRTCPeerConnection;
 		RTCSessionDescription = virtGlobal.RTCSessionDescription;
 		RTCIceCandidate = virtGlobal.RTCIceCandidate;
@@ -23043,34 +23061,17 @@ function Adapter(options) {
 		};
 		canRenegotiate = true;
 		oldSpecRTCOfferOptions = false;
-	// Old Firefox desktop, old Firefox Android.
+	// Firefox desktop, Firefox Android.
 	} else if (
-		(browser.firefox && browserVersion < 47) ||
+		(isDesktop && browser.firefox && browserVersion >= 22) ||
+		(browser.android && browser.firefox && browserVersion >= 33) ||
 		(virtNavigator.mozGetUserMedia && virtGlobal.mozRTCPeerConnection)
 	) {
 		hasWebRTC = true;
 		getUserMedia = virtNavigator.mozGetUserMedia.bind(virtNavigator);
-		mediaDevices = virtNavigator.mediaDevices;
 		RTCPeerConnection = virtGlobal.mozRTCPeerConnection;
 		RTCSessionDescription = virtGlobal.mozRTCSessionDescription;
 		RTCIceCandidate = virtGlobal.mozRTCIceCandidate;
-		MediaStreamTrack = virtGlobal.MediaStreamTrack;
-		attachMediaStream = function (element, stream) {
-			element.src = URL.createObjectURL(stream);
-			return element;
-		};
-		canRenegotiate = false;
-		oldSpecRTCOfferOptions = false;
-	// Modern Firefox desktop, modern Firefox Android.
-	} else if (
-		((browser.firefox || browser.gecko) && browserVersion >= 47)
-	) {
-		hasWebRTC = true;
-		getUserMedia = virtNavigator.mozGetUserMedia.bind(virtNavigator);
-		mediaDevices = virtNavigator.mediaDevices;
-		RTCPeerConnection = virtGlobal.RTCPeerConnection;
-		RTCSessionDescription = virtGlobal.RTCSessionDescription;
-		RTCIceCandidate = virtGlobal.RTCIceCandidate;
 		MediaStreamTrack = virtGlobal.MediaStreamTrack;
 		attachMediaStream = function (element, stream) {
 			element.src = URL.createObjectURL(stream);
@@ -23090,7 +23091,6 @@ function Adapter(options) {
 
 		hasWebRTC = true;
 		getUserMedia = pluginiface.getUserMedia;
-		mediaDevices = pluginiface.mediaDevices;
 		RTCPeerConnection = pluginiface.RTCPeerConnection;
 		RTCSessionDescription = pluginiface.RTCSessionDescription;
 		RTCIceCandidate = pluginiface.RTCIceCandidate;
@@ -23107,7 +23107,6 @@ function Adapter(options) {
 	} else if (virtNavigator.getUserMedia && virtGlobal.RTCPeerConnection) {
 		hasWebRTC = true;
 		getUserMedia = virtNavigator.getUserMedia.bind(virtNavigator);
-		mediaDevices = virtNavigator.mediaDevices;
 		RTCPeerConnection = virtGlobal.RTCPeerConnection;
 		RTCSessionDescription = virtGlobal.RTCSessionDescription;
 		RTCIceCandidate = virtGlobal.RTCIceCandidate;
@@ -23180,9 +23179,6 @@ function Adapter(options) {
 			}
 		};
 	}
-
-	// Expose mediaDevices.
-	Adapter.mediaDevices = mediaDevices;
 
 	// Expose RTCPeerConnection.
 	Adapter.RTCPeerConnection = RTCPeerConnection || throwNonSupported('RTCPeerConnection');
@@ -24097,7 +24093,6 @@ function rtcninja(options) {
 
 	// Expose WebRTC API and utils.
 	rtcninja.getUserMedia = iface.getUserMedia;
-	rtcninja.mediaDevices = iface.mediaDevices;
 	rtcninja.RTCSessionDescription = iface.RTCSessionDescription;
 	rtcninja.RTCIceCandidate = iface.RTCIceCandidate;
 	rtcninja.MediaStreamTrack = iface.MediaStreamTrack;
@@ -24481,9 +24476,9 @@ module.exports = require('../package.json').version;
     }
 
     // set OS flags for platforms that have multiple browsers
-    if (!result.windowsphone && !result.msedge && (android || result.silk)) {
+    if (!result.msedge && (android || result.silk)) {
       result.android = t
-    } else if (!result.windowsphone && !result.msedge && iosdevice) {
+    } else if (iosdevice) {
       result[iosdevice] = t
       result.ios = t
     } else if (mac) {
@@ -24700,10 +24695,6 @@ module.exports = require('../package.json').version;
     for (var browser in minVersions) {
       if (minVersions.hasOwnProperty(browser)) {
         if (_bowser[browser]) {
-          if (typeof minVersions[browser] !== 'string') {
-            throw new Error('Browser version in the minVersion map should be a string: ' + browser + ': ' + String(minVersions));
-          }
-
           // browser version and min supported version.
           return compareVersions([version, minVersions[browser]]) < 0;
         }
@@ -24918,7 +24909,7 @@ module.exports = require('../package.json').version;
 },{}],42:[function(require,module,exports){
 module.exports={
   "name": "rtcninja",
-  "version": "0.7.0",
+  "version": "0.6.8",
   "description": "WebRTC API wrapper to deal with different browsers",
   "author": {
     "name": "Iñaki Baz Castillo",
@@ -24942,45 +24933,45 @@ module.exports={
     "webrtc"
   ],
   "engines": {
-    "node": ">=0.12.0"
+    "node": ">=0.10.32"
   },
   "dependencies": {
-    "bowser": "^1.4.6",
+    "bowser": "^1.4.1",
     "debug": "^2.2.0",
     "merge": "^1.2.0"
   },
   "devDependencies": {
-    "browserify": "^13.1.0",
+    "browserify": "^13.0.1",
     "gulp": "git+https://github.com/gulpjs/gulp.git#4.0",
     "gulp-expect-file": "0.0.7",
     "gulp-filelog": "^0.4.1",
-    "gulp-header": "^1.8.8",
+    "gulp-header": "^1.8.7",
     "gulp-jscs": "^3.0.2",
     "gulp-jscs-stylish": "^1.4.0",
     "gulp-jshint": "^2.0.1",
     "gulp-rename": "^1.2.2",
     "gulp-uglify": "^1.5.4",
-    "jshint": "^2.9.3",
-    "jshint-stylish": "^2.2.1",
+    "jshint": "^2.9.2",
+    "jshint-stylish": "^2.2.0",
     "vinyl-source-stream": "^1.1.0"
   },
-  "gitHead": "7160d2718fcf4a2ca0f90641456f35aa7294b837",
+  "gitHead": "dc4fff27105a83126193e29c1c63d9cf0c54f099",
   "bugs": {
     "url": "https://github.com/eface2face/rtcninja.js/issues"
   },
-  "_id": "rtcninja@0.7.0",
+  "_id": "rtcninja@0.6.8",
   "scripts": {},
-  "_shasum": "8a57d8e51ef0777f16105a33ac99e4de515cd540",
-  "_from": "rtcninja@>=0.7.0 <0.8.0",
-  "_npmVersion": "2.15.9",
-  "_nodeVersion": "4.5.0",
+  "_shasum": "2cb27f2b7b9a74450329d9b240959e4d5b308bbb",
+  "_from": "rtcninja@>=0.6.7 <0.7.0",
+  "_npmVersion": "2.14.20",
+  "_nodeVersion": "4.4.1",
   "_npmUser": {
     "name": "ibc",
     "email": "ibc@aliax.net"
   },
   "dist": {
-    "shasum": "8a57d8e51ef0777f16105a33ac99e4de515cd540",
-    "tarball": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.7.0.tgz"
+    "shasum": "2cb27f2b7b9a74450329d9b240959e4d5b308bbb",
+    "tarball": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.6.8.tgz"
   },
   "maintainers": [
     {
@@ -24989,11 +24980,12 @@ module.exports={
     }
   ],
   "_npmOperationalInternal": {
-    "host": "packages-12-west.internal.npmjs.com",
-    "tmp": "tmp/rtcninja-0.7.0.tgz_1475058681576_0.9719346789643168"
+    "host": "packages-16-east.internal.npmjs.com",
+    "tmp": "tmp/rtcninja-0.6.8.tgz_1468236144989_0.6427697774488479"
   },
   "directories": {},
-  "_resolved": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.7.0.tgz"
+  "_resolved": "https://registry.npmjs.org/rtcninja/-/rtcninja-0.6.8.tgz",
+  "readme": "ERROR: No README data found!"
 }
 
 },{}],43:[function(require,module,exports){
