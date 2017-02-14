@@ -10,6 +10,6 @@ declare namespace JsSIP {
         constructor(config: any);
     }
 
-    let rtcninja: any;
+    var rtcninja: any;
 }
 
