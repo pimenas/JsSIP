@@ -10,6 +10,7 @@
     "Saúl Ibarra Corretgé <saghul@gmail.com> (https://github.com/saghul)"
   ],
   "main": "lib/JsSIP.js",
+  "typings": "lib/JsSIP.d.ts",
   "keywords": [
     "sip",
     "websocket",
