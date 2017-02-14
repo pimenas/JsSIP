@@ -9,7 +9,5 @@ declare namespace JsSIP {
     class UA {
         constructor(config: any);
     }
-
-    module rtcninja { }
 }
 
