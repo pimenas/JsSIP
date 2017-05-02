@@ -16537,15 +16537,12 @@ function sendCandidate(candidate) {
         return;
     }
 
-    var nextCandidate = self.candidates.shift();
-
-    if (!candidate && !nextCandidate) {
-        return;
+    if (!candidate) {
+        candidate = self.candidates.shift();
     }
 
     if (!candidate) {
-        candidate = nextCandidate;
-        nextCandidate = self.candidates.shift();
+        return;
     }
 
     var eventHandlers = {
@@ -16553,9 +16550,7 @@ function sendCandidate(candidate) {
             debug('response: %s', JSON.stringify(response));
             self.waiting_candidate_response = false;
 
-            if (nextCandidate) {
-                sendCandidate.call(self, nextCandidate);
-            }
+            sendCandidate.call(self);
         }
     };
 
