@@ -15337,16 +15337,6 @@ function receiveReinvite(request) {
     var e = {originator:'remote', type:'offer', sdp:request.body};
     this.emit('sdp', e);
 
-    // save old connection, we might need it
-    this.oldConnection = this.connection;
-    this.oldConnection.onaddstream = null;
-    this.oldConnection.onremovestream = null;
-    this.oldConnection.oniceconnectionstatechange = null;
-
-    // Create a new rtcninja.RTCPeerConnection instance.
-    createRTCConnection.call(this, this.oldConnection.pcConfig, this.oldConnection.pcConstraints);
-    this.connection.addStream(this.localMediaStream);
-
     this.connection.setRemoteDescription(
       new rtcninja.RTCSessionDescription({type:'offer', sdp:e.sdp}),
       // success
