@@ -16149,7 +16149,8 @@ function sendUpdate(options) {
           if (eventHandlers.succeeded) { eventHandlers.succeeded(response); }
         },
         // failure
-        function() {
+        function(error) {
+          debug('setRemoteDescription answer error: ', error);
           onFailed();
         }
       );
@@ -18808,6 +18809,7 @@ Subscription.prototype.receiveRequest = function(request) {
     switch(request.method) {
         case JsSIP_C.NOTIFY:
             if (this.status === C.STATUS_SUBSCRIBED) {
+                request.reply(200);
                 for (i = 0; i < this.subscribers.length; i++) {
                     this.subscribers[i].call(this, request.body);
                 }
