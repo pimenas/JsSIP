@@ -16689,9 +16689,15 @@ function sendCandidate(candidate) {
 
     this.waiting_candidate_response = true;
 
+    var candidateString = JSON.stringify({
+        candidate: candidate.candidate,
+        sdpMid: candidate.sdpMid,
+        sdpMLineIndex: candidate.sdpMLineIndex
+    });
+
     sendRequest.call(this, JsSIP_C.INFO, {
         extraHeaders: extraHeaders,
-        body: JSON.stringify(candidate),
+        body: candidateString,
         eventHandlers: eventHandlers
     });
 }
