@@ -14165,7 +14165,8 @@ RTCSession.prototype.answer = function(options) {
   // If at least audio or video is requested prompt getUserMedia.
   } else if (mediaConstraints.audio || mediaConstraints.video) {
     self.localMediaStreamLocallyGenerated = true;
-    navigator.mediaDevices.getUserMedia(mediaConstraints)
+    var getUserMedia = getTemasysGetUserMedia();
+    getUserMedia(mediaConstraints)
       .then(userMediaSucceeded)
       .catch(function(error) {
         userMediaFailed(error);
@@ -14202,7 +14203,8 @@ RTCSession.prototype.answer = function(options) {
 
       var offer = new RTCSessionDescription({type:'offer', sdp:e.sdp});
 
-      self.connection.setRemoteDescription(offer)
+      var setRemoteDescription = getTemasysSetRemoteDescription(self.connection);
+      setRemoteDescription(offer)
         .then(remoteDescriptionSucceededOrNotNeeded)
         .catch(function(error) {
           request.reply(488);
@@ -14896,7 +14898,8 @@ RTCSession.prototype.receiveRequest = function(request) {
 
           this.emit('sdp', e);
 
-          this.connection.setRemoteDescription(answer)
+          var setRemoteDescription = getTemasysSetRemoteDescription(this.connection);
+          setRemoteDescription(answer)
             .then(function() {
               if (!self.is_confirmed) {
                 confirmed.call(self, 'remote', request);
@@ -15154,7 +15157,8 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
   this.rtcReady = false;
 
   if (type === 'offer') {
-    connection.createOffer(constraints)
+    var createOffer = getTemasysCreateOffer(connection);
+    createOffer(constraints)
       .then(createSucceeded)
       .catch(function(error) {
         self.rtcReady = true;
@@ -15166,7 +15170,8 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
       });
   }
   else if (type === 'answer') {
-    connection.createAnswer(constraints)
+    var createAnswer = getTemasysCreateAnswer(connection);
+    createAnswer(constraints)
       .then(createSucceeded)
       .catch(function(error) {
         self.rtcReady = true;
@@ -15209,7 +15214,8 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
       }
     });
 
-    connection.setLocalDescription(desc)
+    var setLocalDescription = getTemasysSetLocalDescription(connection);
+    setLocalDescription(desc)
       .then(function() {
         if (connection.iceGatheringState === 'complete' || self.ua.configuration.use_info_for_ice) {
           self.rtcReady = true;
@@ -15374,7 +15380,8 @@ function receiveReinvite(request) {
 
     this.emit('sdp', e);
 
-    this.connection.setRemoteDescription(offer)
+    var setRemoteDescription = getTemasysSetRemoteDescription(this.connection);
+    setRemoteDescription(offer)
       .then(doAnswer)
       .catch(function(error) {
         request.reply(488);
@@ -15525,7 +15532,8 @@ function receiveUpdate(request) {
 
   var offer = new RTCSessionDescription({type:'offer', sdp:e.sdp});
 
-  this.connection.setRemoteDescription(offer)
+  var setRemoteDescription = getTemasysSetRemoteDescription(this.connection);
+  setRemoteDescription(offer)
     .then(function() {
       if (self.remoteHold === true && hold === false) {
         self.remoteHold = false;
@@ -15757,7 +15765,9 @@ function sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream) 
   // If at least audio or video is requested prompt getUserMedia.
   } else if (mediaConstraints.audio || mediaConstraints.video) {
     this.localMediaStreamLocallyGenerated = true;
-    navigator.mediaDevices.getUserMedia(mediaConstraints)
+
+    var getUserMedia = getTemasysGetUserMedia();
+    getUserMedia(mediaConstraints)
       .then(userMediaSucceeded)
       .catch(function(error)
       {
@@ -15933,7 +15943,8 @@ function receiveInviteResponse(response) {
 
       answer = new RTCSessionDescription({type:'answer', sdp:e.sdp});
 
-      this.connection.setRemoteDescription(answer)
+      var setRemoteDescription = getTemasysSetRemoteDescription(this.connection);
+      setRemoteDescription(answer)
         .catch(function(error) {
           debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
@@ -15979,7 +15990,8 @@ function receiveInviteResponse(response) {
           if (self.connection.signalingState === 'stable') {
             return self.connection.createOffer()
               .then(function(offer) {
-                return self.connection.setLocalDescription(offer);
+                var setLocalDescription = getTemasysSetLocalDescription(self.connection);
+                return setLocalDescription(offer);
               })
               .catch(function(error) {
                 acceptAndTerminate.call(self, response, 500, error.toString());
@@ -15992,7 +16004,8 @@ function receiveInviteResponse(response) {
           }
         })
         .then(function() {
-          self.connection.setRemoteDescription(answer)
+          var setRemoteDescription = getTemasysSetRemoteDescription(self.connection);
+          setRemoteDescription(answer)
             .then(function() {
               // Handle Session Timers.
               handleSessionTimersInIncomingResponse.call(self, response);
@@ -16108,7 +16121,8 @@ function sendReinvite(options) {
 
     var answer = new RTCSessionDescription({type:'answer', sdp:e.sdp});
 
-    self.connection.setRemoteDescription(answer)
+    var setRemoteDescription = getTemasysSetRemoteDescription(self.connection);
+    setRemoteDescription(answer)
       .then(function() {
         if (eventHandlers.succeeded) {
           eventHandlers.succeeded(response);
@@ -16249,7 +16263,8 @@ function sendUpdate(options) {
 
       var answer = new RTCSessionDescription({type:'answer', sdp:e.sdp});
 
-      self.connection.setRemoteDescription(answer)
+      var setRemoteDescription = getTemasysSetRemoteDescription(self.connection);
+      setRemoteDescription(answer)
         .then(function() {
           if (eventHandlers.succeeded) {
             eventHandlers.succeeded(response);
@@ -16701,6 +16716,101 @@ function sendCandidate(candidate) {
         eventHandlers: eventHandlers
     });
 }
+
+function isUsingTemasysPlugin() {
+    return  (typeof isUsingTemasysPlugin !== 'undefined') && isUsingTemasysPlugin;
+}
+
+function getTemasysGetUserMedia() {
+    var getUserMedia = navigator.mediaDevices.getUserMedia;
+
+    if (isUsingTemasysPlugin()) {
+        getUserMedia = function(mediaConstraints) {
+            return new Promise(function(resolve, reject) {
+                navigator.getUserMedia(mediaConstraints, function(stream) {
+                    resolve(stream);
+                }, function(error) {
+                    reject(error);
+                });
+            });
+        };
+    }
+
+    return getUserMedia;
+}
+
+function getTemasysCreateOffer(connection) {
+    var createOffer = connection.createOffer;
+
+    if (isUsingTemasysPlugin()) {
+        createOffer = function(constraints) {
+            return new Promise(function(resolve, reject) {
+                connection.createOffer(function(desc) {
+                    resolve(desc);
+                }, function(error) {
+                    reject(error);
+                }, constraints);
+            });
+        };
+    }
+
+    return createOffer;
+}
+
+function getTemasysCreateAnswer(connection) {
+    var createAnswer = connection.createAnswer;
+
+    if (isUsingTemasysPlugin()) {
+        createAnswer = function(constraints) {
+            return new Promise(function(resolve, reject) {
+                connection.createAnswer(function(desc) {
+                    resolve(desc);
+                }, function(error) {
+                    reject(error);
+                }, constraints);
+            });
+        };
+    }
+
+    return createAnswer;
+}
+
+function getTemasysSetLocalDescription(connection) {
+    var setLocalDescription = connection.setLocalDescription;
+
+    if (isUsingTemasysPlugin()) {
+        setLocalDescription = function(desc) {
+            return new Promise(function(resolve, reject) {
+                connection.setLocalDescription(desc, function() {
+                    resolve();
+                }, function(error) {
+                    reject(error);
+                });
+            });
+        };
+    }
+
+    return setLocalDescription;
+}
+
+function getTemasysSetRemoteDescription(connection) {
+    var setRemoteDescription = connection.setRemoteDescription;
+
+    if (isUsingTemasysPlugin()) {
+        setRemoteDescription = function(desc) {
+            return new Promise(function(resolve, reject) {
+                connection.setRemoteDescription(desc, function() {
+                    resolve();
+                }, function(error) {
+                    reject(error);
+                });
+            });
+        };
+    }
+
+    return setRemoteDescription;
+}
+
 
 },{"./Constants":1,"./Dialog":2,"./Exceptions":5,"./RTCSession/DTMF":12,"./RTCSession/Info":13,"./RTCSession/ReferNotifier":14,"./RTCSession/ReferSubscriber":15,"./RTCSession/Request":16,"./RequestSender":18,"./SIPMessage":19,"./Timers":23,"./Transactions":24,"./Utils":28,"debug":31,"events":33,"sdp-transform":38,"util":44}],12:[function(require,module,exports){
 module.exports = DTMF;
