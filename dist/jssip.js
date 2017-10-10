@@ -14958,8 +14958,8 @@ RTCSession.prototype.receiveRequest = function(request) {
                    infoPackage && (infoPackage.match(/^ice-candidates/i))) {
 
             candidate = JSON.parse(request.body);
-            debug('added remote candidate: ' + JSON.stringify(candidate));
-            this.connection.addIceCandidate(candidate);
+            debug('adding remote candidate: ' + JSON.stringify(candidate));
+            this.connection.addIceCandidate(new window.RTCIceCandidate(candidate));
 
             request.reply(200, 'Candidate added');
           }
