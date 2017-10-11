@@ -15134,7 +15134,7 @@ function createRTCConnection(pcConfig, rtcConstraints) {
 
   this.connection = new RTCPeerConnection(pcConfig, rtcConstraints);
 
-  this.connection.addEventListener('iceconnectionstatechange', function() {
+  this.connection.oniceconnectionstatechange = function() {
     var state = self.connection.iceConnectionState;
 
     // TODO: Do more with different states.
@@ -15145,7 +15145,7 @@ function createRTCConnection(pcConfig, rtcConstraints) {
         reason_phrase: JsSIP_C.causes.RTP_TIMEOUT
       });
     }
-  });
+  };
 }
 
 function createLocalDescription(type, onSuccess, onFailure, constraints) {
@@ -15190,7 +15190,7 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
   function createSucceeded(desc) {
     var listener;
 
-    connection.addEventListener('icecandidate', listener = function(event) {
+    connection.onicecandidate = listener = function(event) {
       var candidate = event.candidate;
 
       if (self.ua.configuration.use_info_for_ice) {
@@ -15212,7 +15212,7 @@ function createLocalDescription(type, onSuccess, onFailure, constraints) {
         }
         onSuccess = null;
       }
-    });
+    };
 
     var setLocalDescription = getTemasysSetLocalDescription(connection);
     setLocalDescription(desc)
