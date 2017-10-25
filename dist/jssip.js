@@ -16717,14 +16717,16 @@ function sendCandidate(candidate) {
     });
 }
 
-function isUsingTemasysPlugin() {
-    return  (typeof isUsingTemasysPlugin !== 'undefined') && isUsingTemasysPlugin;
+function isUsingTemasysPlugin2() {
+    return (typeof window['isUsingTemasysPlugin'] !== 'undefined') && window['isUsingTemasysPlugin'];
 }
 
 function getTemasysGetUserMedia() {
-    var getUserMedia = !!navigator.mediaDevices ? navigator.mediaDevices.getUserMedia : navigator.getUserMedia;
+    var getUserMedia = function(constraints) {
+        return navigator.mediaDevices.getUserMedia(constraints);
+    };
 
-    if (isUsingTemasysPlugin()) {
+    if (isUsingTemasysPlugin2()) {
         getUserMedia = function(mediaConstraints) {
             return new Promise(function(resolve, reject) {
                 navigator.getUserMedia(mediaConstraints, function(stream) {
@@ -16740,9 +16742,22 @@ function getTemasysGetUserMedia() {
 }
 
 function getTemasysCreateOffer(connection) {
-    var createOffer = connection.createOffer;
+    var createOffer = function(constraints) {
+        if (!!RTCPeerConnection.prototype['addTransceiver']) {
+            // Safari without temasys needs this
+            if (!!constraints && constraints.offerToReceiveAudio > 0) {
+                constraints.offerToReceiveAudio = true;
+            }
 
-    if (isUsingTemasysPlugin()) {
+            if (!!constraints && constraints.offerToReceiveVideo > 0) {
+                constraints.offerToReceiveVideo = true;
+            }
+        }
+
+        return connection.createOffer(constraints);
+    };
+
+    if (isUsingTemasysPlugin2()) {
         createOffer = function(constraints) {
             return new Promise(function(resolve, reject) {
                 connection.createOffer(function(desc) {
@@ -16758,9 +16773,11 @@ function getTemasysCreateOffer(connection) {
 }
 
 function getTemasysCreateAnswer(connection) {
-    var createAnswer = connection.createAnswer;
+    var createAnswer = function(constraints) {
+        return connection.createAnswer(constraints);
+    };
 
-    if (isUsingTemasysPlugin()) {
+    if (isUsingTemasysPlugin2()) {
         createAnswer = function(constraints) {
             return new Promise(function(resolve, reject) {
                 connection.createAnswer(function(desc) {
@@ -16776,9 +16793,11 @@ function getTemasysCreateAnswer(connection) {
 }
 
 function getTemasysSetLocalDescription(connection) {
-    var setLocalDescription = connection.setLocalDescription;
+    var setLocalDescription = function(desc) {
+        return connection.setLocalDescription(desc);
+    };
 
-    if (isUsingTemasysPlugin()) {
+    if (isUsingTemasysPlugin2()) {
         setLocalDescription = function(desc) {
             return new Promise(function(resolve, reject) {
                 connection.setLocalDescription(desc, function() {
@@ -16794,9 +16813,11 @@ function getTemasysSetLocalDescription(connection) {
 }
 
 function getTemasysSetRemoteDescription(connection) {
-    var setRemoteDescription = connection.setRemoteDescription;
+    var setRemoteDescription = function(desc) {
+        return connection.setRemoteDescription(desc);
+    };
 
-    if (isUsingTemasysPlugin()) {
+    if (isUsingTemasysPlugin2()) {
         setRemoteDescription = function(desc) {
             return new Promise(function(resolve, reject) {
                 connection.setRemoteDescription(desc, function() {
@@ -27226,6 +27247,7 @@ module.exports = function(dependencies, opts) {
       safariShim.shimRemoteStreamsAPI(window);
       safariShim.shimTrackEventTransceiver(window);
       safariShim.shimGetUserMedia(window);
+      safariShim.shimCreateOfferLegacy(window);
 
       commonShim.shimRTCIceCandidate(window);
       break;
@@ -27382,7 +27404,7 @@ var chromeShim = {
       window.RTCPeerConnection.prototype.removeStream = function(stream) {
         var pc = this;
         pc._senders = pc._senders || [];
-        origRemoveStream.apply(pc, [(pc._streams[stream.id] || stream)]);
+        origRemoveStream.apply(pc, [stream]);
 
         stream.getTracks().forEach(function(track) {
           var sender = pc._senders.find(function(s) {
@@ -27471,7 +27493,7 @@ var chromeShim = {
     var browserDetails = utils.detectBrowser(window);
     // shim addTrack and removeTrack.
     if (window.RTCPeerConnection.prototype.addTrack &&
-        browserDetails.version >= 62) {
+        browserDetails.version >= 63) {
       return;
     }
 
@@ -27696,7 +27718,7 @@ var chromeShim = {
         if (stream.getTracks().length === 1) {
           // if this is the last track of the stream, remove the stream. This
           // takes care of any shimmed _senders.
-          pc.removeStream(stream);
+          pc.removeStream(pc._reverseStreams[stream.id]);
         } else {
           // relying on the same odd chrome behaviour as above.
           stream.removeTrack(sender.track);
@@ -27999,7 +28021,7 @@ module.exports = function(window) {
       // Shim facingMode for mobile & surface pro.
       var face = constraints.video.facingMode;
       face = face && ((typeof face === 'object') ? face : {ideal: face});
-      var getSupportedFacingModeLies = browserDetails.version < 61;
+      var getSupportedFacingModeLies = browserDetails.version < 66;
 
       if ((face && (face.exact === 'user' || face.exact === 'environment' ||
                     face.ideal === 'user' || face.ideal === 'environment')) &&
@@ -29113,6 +29135,45 @@ var safariShim = {
         }
       });
     }
+  },
+
+  shimCreateOfferLegacy: function(window) {
+    var origCreateOffer = window.RTCPeerConnection.prototype.createOffer;
+    window.RTCPeerConnection.prototype.createOffer = function(offerOptions) {
+      var pc = this;
+      if (offerOptions) {
+        var audioTransceiver = pc.getTransceivers().find(function(transceiver) {
+          return transceiver.sender.track &&
+              transceiver.sender.track.kind === 'audio';
+        });
+        if (offerOptions.offerToReceiveAudio === false && audioTransceiver) {
+          if (audioTransceiver.direction === 'sendrecv') {
+            audioTransceiver.setDirection('sendonly');
+          } else if (audioTransceiver.direction === 'recvonly') {
+            audioTransceiver.setDirection('inactive');
+          }
+        } else if (offerOptions.offerToReceiveAudio === true &&
+            !audioTransceiver) {
+          pc.addTransceiver('audio');
+        }
+
+        var videoTransceiver = pc.getTransceivers().find(function(transceiver) {
+          return transceiver.sender.track &&
+              transceiver.sender.track.kind === 'video';
+        });
+        if (offerOptions.offerToReceiveVideo === false && videoTransceiver) {
+          if (videoTransceiver.direction === 'sendrecv') {
+            videoTransceiver.setDirection('sendonly');
+          } else if (videoTransceiver.direction === 'recvonly') {
+            videoTransceiver.setDirection('inactive');
+          }
+        } else if (offerOptions.offerToReceiveVideo === true &&
+            !videoTransceiver) {
+          pc.addTransceiver('video');
+        }
+      }
+      return origCreateOffer.apply(pc, arguments);
+    };
   }
 };
 
@@ -29123,7 +29184,8 @@ module.exports = {
   shimRemoteStreamsAPI: safariShim.shimRemoteStreamsAPI,
   shimGetUserMedia: safariShim.shimGetUserMedia,
   shimRTCIceServerUrls: safariShim.shimRTCIceServerUrls,
-  shimTrackEventTransceiver: safariShim.shimTrackEventTransceiver
+  shimTrackEventTransceiver: safariShim.shimTrackEventTransceiver,
+  shimCreateOfferLegacy: safariShim.shimCreateOfferLegacy
   // TODO
   // shimPeerConnection: safariShim.shimPeerConnection
 };
