@@ -30,7 +30,7 @@
   "dependencies": {
     "debug": "^3.0.1",
     "sdp-transform": "^2.3.0",
-    "webrtc-adapter": "^5.0.0"
+    "webrtc-adapter": "6.2.1"
   },
   "devDependencies": {
     "browserify": "^14.3.0",
@@ -45,8 +45,8 @@
     "jshint": "^2.9.4",
     "jshint-stylish": "^2.2.1",
     "pegjs": "0.7.0",
-    "vinyl-buffer": "^1.0.0",
-    "vinyl-source-stream": "^1.1.0"
+    "vinyl-buffer": "1.0.1",
+    "vinyl-source-stream": "2.0.0"
   },
   "scripts": {
     "test": "gulp test"
